@@ -1,7 +1,4 @@
 # HyperDriver
-Dynamic Hypergraph Framework for Driver Protein Discovery
-
-# HyperDriver
 
 A minimal and clean repository structure for the **HyperDriver** framework — a dynamic PPIN modeling and hypergraph-based driver protein identification pipeline.
 
