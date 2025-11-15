@@ -1,0 +1,5 @@
+{
+  "datasets": [
+    {"name": "Hazbun","static_ppin": "data/Static_PPIN_Hazbun.csv"}
+  ]
+}
