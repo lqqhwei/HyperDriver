@@ -1,4 +1,4 @@
-# HyperDriver: Multi-Scale Spatio-Temporal Hypergraph Modeling for Driver Proteins
+# Multi-Scale Spatio-Temporal Hypergraph Modeling of Dynamic PPI Networks and Key Driver Protein Identification via Adaptive Gating and Minimum-Energy Control
 
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
@@ -8,7 +8,7 @@
 > **Official PyTorch Implementation**
 >
 > This repository contains the code and data for the paper:
-> **"Multi-Scale Spatio-Temporal Hypergraph Modeling of Dynamic PPI Networks and Driver Protein Identification"**.
+> **"Multi-Scale Spatio-Temporal Hypergraph Modeling of Dynamic PPI Networks and Key Driver Protein Identification via Adaptive Gating and Minimum-Energy Control"**.
 
 ---
 
