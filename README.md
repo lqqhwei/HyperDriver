@@ -135,6 +135,14 @@ python main.py
 | ![](docs/Yu_ablation_battle.png) | ![](docs/Yu_efficiency_battle.png) | ![](docs/Yu_top_drivers.png) |
 | Global Ablation Summary Figure | Global Driver Composition Figure | Global Efficiency Summary Figure |
 | ![](docs/global_ablation_summary.png) | ![](docs/global_driver_composition.png) | ![](docs/global_efficiency_summary.png) |
+
+- **Image descriptions in the table above:**
+  1. **Yu_ablation_battle**: Ablation comparison experiments on the Yu dataset(Line chart).
+  2. **Yu_efficiency_battle**: Energy efficiency comparison experiment based on the Yu dataset(Line chart).
+  3. **Yu_top_drivers**: The top 10 key driving proteins in the Yu dataset(bar chart).
+  4. **global_ablation_summary**: Ablation experiments summarizing 12 datasets(Box plot).
+  5. **global_driver_composition**: Key driving protein experiments across 12 datasets(Box plot).
+  6. **global_efficiency_summary**: A summary experiment on energy efficiency across 12 datasets(Box plot).
 ---
 
 ### Step 3: Physical Minimum-Energy Verification (Case Study I)
@@ -156,6 +164,8 @@ python main.py
 | :--- |
 | <img src="docs/energy_comparison_case_study.png" width="50%" /> |
 
+- **Image descriptions in the table above:**
+  1. **energy_comparison_case_study**: Physical minimum energy control experiment based on a 63-node protein subgraph from the Yu dataset(bar chart).
 ---
 
 
