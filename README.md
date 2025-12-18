@@ -39,20 +39,20 @@ HyperDriver/
 ├── data/                         # Raw datasets (Static_PPIN, Dynamic_PPIN, Node_Features, etc.)
 ├── docs/                         # Figures for documentation (e.g., Figure-0.png)
 ├── resource/                     # Auxiliary scripts for validation & ground-truth preparation
+│   ├── driver_case_study/        # Identify representative proteins for case studies
+│   │   └── main.py
 │   ├── energy_case_study/        # (Physics Exp) Exact Lyapunov energy calculation (dense subnet)
-│   │   └── main_case_study.py
+│   │   └── main.py
 │   └── node_labels_with_essential/  # (Data Prep) Essential protein label generation
-│       └── run.py
+│       └── main.py
 ├── src/                          # Core source code
 │   ├── control_engine.py         # Spectral energy proxy & greedy search (control module)
 │   ├── hyper_driver.py           # Model + scoring pipeline
 │   └── layers.py                 # Basic neural network / HGNN layers
 ├── baselines_centrality.py       # Baselines: DC / BC / EC
 ├── eval_driver.py                # Main evaluation logic (“Efficiency Battle”)
-├── find_case_study_candidates.py # Identify representative proteins for case studies
 ├── plot_nature_figs.py           # Visualization suite for paper figures
-├── run.py                        # [MASTER SCRIPT] One-click end-to-end pipeline
-├── requirements.txt
+├── main.py                        # [MASTER SCRIPT] One-click end-to-end pipeline
 └── README.md
 ```
 
@@ -62,7 +62,7 @@ HyperDriver/
 
 - **Python**: 3.12+
 - **PyTorch**: 2.5+
-- OS: Windows / Linux / macOS (tested on Windows 10 + NVIDIA GPU)
+- OS: Windows / Linux / macOS (tested on Windows 10 + NVIDIA GeForce RTX 4060 Laptop GPU + 13th Gen Intel(R) Core(TM) i9-13900H 2.60GHz + 16GB MEM)
 
 Core dependencies typically include: `torch`, `torch-geometric` (for GNN parts), `numpy`, `pandas`, `scipy`, `networkx`, `matplotlib`, `seaborn`, `tqdm`.
 
@@ -95,15 +95,15 @@ We provide a hierarchical workflow to reproduce all experiments reported in the 
 
 Before running the main model, generate the **Essential Protein** labels by integrating biological databases (e.g., SGD, OGEE, DEG).
 
-- **Script location:** `resource/node_labels_with_essential/run.py`
+- **Script location:** `resource/node_labels_with_essential/main.py`
 - **Command:**
 
 ```bash
 cd resource/node_labels_with_essential
-python run.py
+python main.py
 ```
 
-- **Output:** generates `data/Node_labels_with_essential.csv` (or similarly named label file).
+- **Output:** generates `output/Node_labels_with_essential.csv`.
 
 ---
 
@@ -111,55 +111,67 @@ python run.py
 
 Run the master script from the repository root to execute the full pipeline:
 
-- **Script location:** `run.py`
+- **Script location:** `main.py`
 - **What it does:**
   1. **Preprocessing**: constructs dynamic graphs for all datasets.
   2. **Training**: trains the HyperDriver model (with distillation if enabled).
   3. **Baselines**: computes Degree / Betweenness / Eigenvector and random baselines.
-  4. **Evaluation**: runs the **Efficiency Battle** (e.g., Figure 4) and ablation studies (e.g., Figure 5).
+  4. **Evaluation**: runs the **Efficiency Battle** (e.g., Yu_efficiency_battle.png) and ablation studies (e.g., Yu_ablation_battle.png).
 
 - **Command:**
 
 ```bash
 # Ensure you are in the root directory (e.g., D:\HyperDriver or ~/HyperDriver)
-python run.py
+python main.py
 ```
 
 - **Outputs:**
   - Results are saved under `results/<dataset>/full/` (CSV scores, metrics, logs).
-  - Figures are saved under `figures/`.
+  - Figures are saved under figures/ `ablation_battles`,`energy_battles`,`global_summary`,`top_drivers`.
 
+---
+| Ablation Battle (Yu) Figure | Efficiency Battle (Yu) Figure | Top Drivers (Yu) Figure |
+| :---: | :---: | :---: |
+| ![](docs/Yu_ablation_battle.png) | ![](docs/Yu_efficiency_battle.png) | ![](docs/Yu_top_drivers.png) |
+| Global Ablation Summary Figure | Global Driver Composition Figure | Global Efficiency Summary Figure |
+| ![](docs/global_ablation_summary.png) | ![](docs/global_driver_composition.png) | ![](docs/global_efficiency_summary.png) |
 ---
 
 ### Step 3: Physical Minimum-Energy Verification (Case Study I)
 
 To validate the spectral proxy, we solve the **exact Lyapunov equation** on a dense sub-network (a “ground-truth” physics simulation).
 
-- **Script location:** `resource/energy_case_study/main_case_study.py`
+- **Script location:** `resource/energy_case_study/main.py`
 - **Command:**
 
 ```bash
 cd resource/energy_case_study
-python main_case_study.py
+python main.py
 ```
 
 - **Output:** generates resource\energy_case_study\output\ `energy_results_63_nodes.csv`, `energy_comparison_case_study.png`.
+---
+
+| Energy Comparison Case Study Figure |
+| :--- |
+| <img src="docs/energy_comparison_case_study.png" width="50%" /> |
 
 ---
+
 
 ### Step 4: Key Driver Protein Identification (Case Study II)
 
 To screen for the representative proteins discussed in the paper (e.g., the “Hidden Driver” **YGR192C**), run the candidate selector:
 
-- **Script location:** `find_case_study_candidates.py`
+- **Script location:** `resource/driver_case_study/main.py`
 - **Command:**
 
 ```bash
-# Ensure you are in the root directory (e.g., D:\HyperDriver or ~/HyperDriver)
-python find_case_study_candidates.py
+cd resource/driver_case_study
+python main.py
 ```
 
-- **Output:** generates `results/best_case_study_representatives.csv`.
+- **Output:** generates resource\driver_case_study\output\ `case_study_candidates.csv`,`best_case_study_representatives.csv`.
 
 ---
 ## Datasets
@@ -206,7 +218,7 @@ By default, the pipeline organizes outputs as:
 - `figures/`  
   - paper-ready plots produced by `plot_nature_figs.py`
 
-If your project uses different directories (e.g., `outputs/`), update `conf/` and `run.py` accordingly.
+If your project uses different directories (e.g., `outputs/`), update `conf/` and `main.py` accordingly.
 
 ---
 
