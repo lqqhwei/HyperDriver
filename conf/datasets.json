@@ -1,5 +1,17 @@
 {
+  "description": "HyperDriver 实验数据集控制配置",
   "datasets": [
-    {"name": "Hazbun","static_ppin": "data/Static_PPIN_Hazbun.csv"}
+    { "name": "Hazbun",        "enabled": true },
+    { "name": "Babu",          "enabled": true },
+    { "name": "Breitkreutz",   "enabled": true },
+    { "name": "Gavin",         "enabled": true },
+    { "name": "Ho",            "enabled": true },
+    { "name": "Ito",           "enabled": true },
+    { "name": "Krogan_LCMS",   "enabled": true },
+    { "name": "Krogan_MALDI",  "enabled": true },
+    { "name": "Lambert",       "enabled": true },
+    { "name": "Tarassov",      "enabled": true },
+    { "name": "Uetz",          "enabled": true },
+    { "name": "Yu",            "enabled": true }
   ]
 }
