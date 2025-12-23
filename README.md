@@ -1,8 +1,9 @@
 # Multi-Scale Spatio-Temporal Hypergraph Modeling of Dynamic PPI Networks and Key Driver Protein Identification via Adaptive Gating and Minimum-Energy Control
 
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18032184.svg)](https://doi.org/10.5281/zenodo.18032184)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/badge/Python-3.8%2B-blue.svg)](https://www.python.org/)
-[![PyTorch](https://img.shields.io/badge/PyTorch-1.12%2B-orange.svg)](https://pytorch.org/)
+[![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
+[![PyTorch](https://img.shields.io/badge/PyTorch-2.5%2B-orange.svg)](https://pytorch.org/)
 [![Paper](https://img.shields.io/badge/Paper-Submission-green.svg)](#citation)
 
 > **Official PyTorch Implementation**
