@@ -163,7 +163,7 @@ python main.py
 
 | Energy Comparison Case Study Figure |
 | :--- |
-| <img src="docs/energy_comparison_case_study.png" width="50%" /> |
+| <img src="docs/energy_comparison_case_study.png"/> |
 
 - **Image descriptions in the table above:**
   1. **energy_comparison_case_study**: Physical minimum energy control experiment based on a 63-node protein subgraph from the Yu dataset(bar chart).
