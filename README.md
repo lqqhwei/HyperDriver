@@ -158,15 +158,15 @@ cd resource/energy_case_study
 python main.py
 ```
 
-- **Output:** generates resource\energy_case_study\output\ `energy_results_63_nodes.csv`, `energy_comparison_case_study.png`.
+- **Output:** generates resource\energy_case_study\output\ `energy_results.csv`, `selection_nodes.png`.
 ---
 
 | Energy Comparison Case Study Figure |
 | :--- |
-| <img src="docs/energy_comparison_case_study.png"/> |
+| <img src="docs/energy_comparison.png"/> |
 
 - **Image descriptions in the table above:**
-  1. **energy_comparison_case_study**: Physical minimum energy control experiment based on a 63-node protein subgraph from the Yu dataset(bar chart).
+  1. **energy_comparison**: Physical minimum energy control experiment based on a 63 nodes protein subgraph from the Yu dataset(bar chart).
 ---
 
 
@@ -182,7 +182,7 @@ cd resource/driver_case_study
 python main.py
 ```
 
-- **Output:** generates resource\driver_case_study\output\ `case_study_candidates.csv`,`best_case_study_representatives.csv`.
+- **Output:** generates resource\driver_case_study\output\ `candidates.csv`,`driver_results.csv`.
 
 ---
 ## Datasets

@@ -12,8 +12,8 @@ HyperDriver Case Study Candidate Selector (Tie-break Upgrade)
 - 排序加入 tie-break：避免 DriverScore 并列（尤其 0 值）导致挑不到"最极端反差"的代表节点。
 
 输出：
-- output/case_study_candidates.csv
-- output/best_case_study_representatives.csv
+- output/candidates.csv
+- output/driver_results.csv
 """
 
 import os
@@ -246,7 +246,7 @@ def main():
 
     # 1) 保存候选池
     os.makedirs(os.path.join(root_dir, "resource/driver_case_study/output"), exist_ok=True)
-    out_path = os.path.join(root_dir, "resource/driver_case_study/output", "case_study_candidates.csv")
+    out_path = os.path.join(root_dir, "resource/driver_case_study/output", "candidates.csv")
     res_df.to_csv(out_path, index=False)
     print(f"[INFO] Full candidates saved to: {out_path}")
 
@@ -254,7 +254,7 @@ def main():
     print("\n========== The Final Three ==========")
     best_df = select_best_representatives(res_df)
 
-    best_out_path = os.path.join(root_dir, "resource/driver_case_study/output", "best_case_study_representatives.csv")
+    best_out_path = os.path.join(root_dir, "resource/driver_case_study/output", "driver_results.csv")
     best_df.to_csv(best_out_path, index=False)
 
     # 打印到控制台

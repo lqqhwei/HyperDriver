@@ -56,8 +56,8 @@ plt.rcParams["lines.linewidth"] = 1.2    # 折线图线宽
 plt.rcParams["lines.markersize"] = 3.5   # 点的大小
 
 # 分辨率控制 (全局生效)
-plt.rcParams["figure.dpi"] = 300         # 屏幕显示 DPI
-plt.rcParams["savefig.dpi"] = 300        # 保存文件 DPI
+plt.rcParams["figure.dpi"] = 600         # 屏幕显示 DPI
+plt.rcParams["savefig.dpi"] = 600        # 保存文件 DPI
 
 # 颜色定义（保持主方法颜色不变；修复消融颜色冲突）
 STRATEGY_COLORS = {
