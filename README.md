@@ -46,26 +46,42 @@ Our results demonstrate that HyperDriver reduces control energy by **≈10^2×**
 ## Project Structure
 
 ```text
-HyperDriver/
+HyperDriver/                      # Thesis Reproduction Project Root Directory
 ├── conf/                         # Configuration files for datasets
-├── data/                         # Raw datasets (Static_PPIN, Dynamic_PPIN, Node_Features, etc.)
-├── docs/                         # Figures for documentation (e.g., Figure-0.png)
+├── data/                         # Raw datasets (e.g., Static_PPIN, Dynamic_PPIN, Node_Features)
+├── docs/                         # Required images and file directory for readme
+├── figures/                      # All experimental images generated after the main script is executed
+├── results/                      # All dataset CSV result files generated after the main script is executed
+├── checkpoints/                  # Stores trained model weights and configurations for full model evaluation
+├── processed/                    # Holds cleaned, unified, and index-mapped protein datasets for training
 ├── resource/                     # Auxiliary scripts for validation & ground-truth preparation
 │   ├── driver_case_study/        # Identify representative proteins for case studies
-│   │   └── main.py
+│       ├── output/               # Results output directory
+│       └── src/                  # Case source code directory
+│           └── main.py           # [CASE SCRIPT] One-click script execution for typical protein enrichment analysis cases
 │   ├── energy_case_study/        # (Physics Exp) Exact Lyapunov energy calculation (dense subnet)
-│   │   └── main.py
+│       ├── output                # Results output directory
+│       └── src/                  # Case source code directory
+│           └── main.py           # [CASE SCRIPT] One-click script execution for the physical minimum energy control case
 │   └── node_labels_with_essential/  # (Data Prep) Essential protein label generation
-│       └── main.py
+│       ├── data/                 # Preprocessed input data catalog
+│       ├── output/               # Results output directory
+│       └── src/                  # Preprocessed source code directory
+│           └── main.py           # [PREPROCESSING SCRIPT] 
 ├── src/                          # Core source code
 │   ├── control_engine.py         # Spectral energy proxy & greedy search (control module)
+│   ├── data_utils.py             # This script cleans and unifies protein features, labels, and networks.
 │   ├── hyper_driver.py           # Model + scoring pipeline
 │   └── layers.py                 # Basic neural network / HGNN layers
 ├── baselines_centrality.py       # Baselines: DC / BC / EC
 ├── eval_driver.py                # Main evaluation logic (“Efficiency Battle”)
 ├── plot_nature_figs.py           # Visualization suite for paper figures
-├── main.py                        # [MASTER SCRIPT] One-click end-to-end pipeline
-└── README.md
+├── preprocess_loop.py            # This script automates preprocessing for all enabled datasets in the configuration
+├── train_hyperdriver.py          # This script trains the HyperDriver model using node features and networks.
+├── main.py                       # [MASTER SCRIPT] The main experimental execution script (e.g., Module1, Module2, Module3)
+├── LICENSE                       # Defines legal permissions and restrictions for using or sharing code
+├── .gitignore                    # Lists files or folders for Git to intentionally exclude
+└── README.md                     # Readme Detailed Reading Document
 ```
 
 ---
@@ -133,13 +149,13 @@ Run the master script from the repository root to execute the full pipeline:
 - **Command:**
 
 ```bash
-# Ensure you are in the root directory (e.g., D:\HyperDriver or ~/HyperDriver)
+# Ensure you are in the root directory (e.g., D:\HyperDriver)
 python main.py
 ```
 
 - **Outputs:**
-  - Results are saved under `results/<dataset>/full/` (CSV scores, metrics, logs).
-  - Figures are saved under figures/ `ablation_battles`,`energy_battles`,`global_summary`,`top_drivers`.
+  - Results are saved under `results/<dataset>/full/`,`results/<dataset>/baselines/` (CSV files).
+  - Figures are saved under `figures` / `ablation_battles`,`energy_battles`,`global_summary`,`top_drivers`.
 
 ---
 | Ablation Battle (Yu) Figure | Efficiency Battle (Yu) Figure | Top Drivers (Yu) Figure |
@@ -169,7 +185,7 @@ cd resource/energy_case_study
 python main.py
 ```
 
-- **Output:** generates resource\energy_case_study\output\ `energy_results.csv`, `selection_nodes.png`.
+- **Output:** generates `resource\energy_case_study\output` \ `energy_results.csv`, `selection_nodes.png`.
 ---
 
 | Energy Comparison Case Study Figure |
@@ -193,7 +209,7 @@ cd resource/driver_case_study
 python main.py
 ```
 
-- **Output:** generates resource\driver_case_study\output\ `candidates.csv`,`driver_results.csv`.
+- **Output:** generates `resource\driver_case_study\output` \ `candidates.csv`,`driver_results.csv`.
 
 ---
 ## Datasets
@@ -228,19 +244,6 @@ If you use the DPPIN datasets, please cite the original paper:
 ```
 We thank the authors of DPPIN for making the datasets publicly available.
 
-
----
-## Results & Outputs
-
-By default, the pipeline organizes outputs as:
-
-- `results/<dataset>/full/`  
-  - `*.csv` scores (driver score, energy efficiency, baselines)  
-  - logs and intermediate metrics
-- `figures/`  
-  - paper-ready plots produced by `plot_nature_figs.py`
-
-If your project uses different directories (e.g., `outputs/`), update `conf/` and `main.py` accordingly.
 
 ---
 
