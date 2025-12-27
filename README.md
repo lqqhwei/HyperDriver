@@ -15,27 +15,31 @@
 
 ## Overview
 
-**HyperDriver** is a unified computational framework designed to identify **energy-efficient driver proteins** in **dynamic protein–protein interaction (PPI) networks**. See Figure 1 for details.
+**HyperDriver** is a unified computational framework designed to identify **energy-efficient driver proteins** in **dynamic protein–protein interaction (PPI) networks**. `See Figure 1 for details`
 
 Traditional methods (e.g., Degree Centrality) often conflate structural “hubs” with functional “drivers”. HyperDriver decouples them by combining:
 
-1. **Dynamic Graph Learning**: reconstructing temporal edge weights via a teacher–student (distillation) strategy. See Figure 2 for details.
-2. **Multi-Scale Hypergraphs**: capturing high-order functional synergies beyond pairwise interactions. See Figure 3 for details.
-3. **Minimum-Energy Control**: using a spectral energy proxy and a stochastic greedy search to select drivers. See Figure 4 for details.
+1. **Dynamic Graph Learning**: reconstructing temporal edge weights via a teacher–student (distillation) strategy. `See Figure 2 for details`
+2. **Multi-Scale Hypergraphs**: capturing high-order functional synergies beyond pairwise interactions. `See Figure 3 for details`
+3. **Minimum-Energy Control**: using a spectral energy proxy and a stochastic greedy search to select drivers. `See Figure 4 for details`
 
 Our results demonstrate that HyperDriver reduces control energy by **≈10^2×** compared to common baselines in multiple yeast datasets.
 
 **Figure 1. Framework figure:**  
+---
 ![Framework Overview](docs/Figure1.png)
 
-**Figure 2. Dynamic Graph Learning:**  
-![Framework Overview](docs/Figure2.png)
+**Figure 2. Dynamic Graph Learning figure:**  
+---
+![Dynamic Graph Learning](docs/Figure2.png)
 
-**Figure 3. Multi-Scale Hypergraphs:**  
-![Framework Overview](docs/Figure3.png)
+**Figure 3. Multi-Scale Hypergraphs figure:**  
+---
+![Multi-Scale Hypergraphs](docs/Figure3.png)
 
-**Figure 4. Minimum-Energy Control:**  
-![Framework Overview](docs/Figure4.png)
+**Figure 4. Minimum-Energy Control figure:**  
+---
+![Minimum-Energy Control](docs/Figure4.png)
 
 ---
 
