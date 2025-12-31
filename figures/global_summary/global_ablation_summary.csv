@@ -1,4 +1,4 @@
-Dataset,Strategy,Avg_Log10_Energy
+Dataset,Strategy,MeanLogEnergy
 Hazbun,HyperDriver,3.2044672929788285
 Hazbun,w/o Dynamics,4.818183152220605
 Hazbun,w/o Greedy,4.422567605063984

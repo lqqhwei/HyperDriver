@@ -1,4 +1,4 @@
-Dataset,Strategy,Avg_Log10_Energy
+Dataset,Strategy,MeanLogEnergy
 Hazbun,BC,4.072887198144395
 Hazbun,DC,4.542199982220356
 Hazbun,EC,4.544710190563021

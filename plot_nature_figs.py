@@ -1,5 +1,3 @@
-# plot_nature_figs.py
-
 import argparse
 import os
 import warnings
@@ -16,7 +14,7 @@ warnings.filterwarnings("ignore")
 from src.data_utils import load_datasets_config
 
 # ============================
-# 1. Unified drawing style settings (SCI Standard)
+# 1. Unified drawing style settings
 # ============================
 STD_FIG_SIZE = (3.5, 3.0)
 
@@ -32,6 +30,7 @@ plt.rcParams["axes.facecolor"] = "white"
 plt.rcParams["savefig.facecolor"] = "white"
 plt.rcParams["savefig.transparent"] = False
 
+# Font size steps (optimized for 3.5x3.0 inch canvas)
 plt.rcParams["font.size"] = 7
 plt.rcParams["axes.labelsize"] = 8
 plt.rcParams["axes.titlesize"] = 9
@@ -39,13 +38,13 @@ plt.rcParams["legend.fontsize"] = 7
 plt.rcParams["xtick.labelsize"] = 7
 plt.rcParams["ytick.labelsize"] = 7
 
+# Line and layout precision
 plt.rcParams["axes.linewidth"] = 0.8
 plt.rcParams["grid.linewidth"] = 0.5
 plt.rcParams["xtick.major.width"] = 0.8
 plt.rcParams["ytick.major.width"] = 0.8
 plt.rcParams["lines.linewidth"] = 1.2
 plt.rcParams["lines.markersize"] = 3.5
-
 plt.rcParams["figure.dpi"] = 600
 plt.rcParams["savefig.dpi"] = 600
 
@@ -63,20 +62,18 @@ STRATEGY_COLORS = {
 
 def _ensure_parent_dir(path: str) -> None:
     d = os.path.dirname(path)
-    if d:
-        os.makedirs(d, exist_ok=True)
+    if d: os.makedirs(d, exist_ok=True)
 
 def save_publication_figure(fig, out_path: str) -> None:
+    """Save as PDF + PNG and ensure a physical white background."""
     _ensure_parent_dir(out_path)
     base_path, _ = os.path.splitext(out_path)
-    
     try:
         fig.patch.set_facecolor("white")
-    except Exception:
-        pass
+    except Exception: pass
 
-    fig.savefig(f"{base_path}.pdf", format="pdf", bbox_inches="tight", pad_inches=0.02)
-    fig.savefig(f"{base_path}.png", format="png", bbox_inches="tight", pad_inches=0.02)
+    fig.savefig(f"{base_path}.pdf", format="pdf", bbox_inches="tight", pad_inches=0.02, transparent=False)
+    fig.savefig(f"{base_path}.png", format="png", bbox_inches="tight", pad_inches=0.02, transparent=False)
 
 # ============================
 # 2. Plotting and exporting data from a single dataset
@@ -88,40 +85,47 @@ def plot_efficiency_battle(root_dir: str, dataset_name: str):
     df = pd.read_csv(csv_path)
     if df.empty: return
 
+    # Data preprocessing
     main_strats = ["HyperDriver (Full)", "DC", "BC", "EC", "Random"]
     df = df[df["strategy"].isin(main_strats)].copy()
     df.loc[df["strategy"] == "HyperDriver (Full)", "strategy"] = "HyperDriver"
     df["log_energy"] = np.log10(df["energy_cost"] + 1e-9)
     df = df[df["selected_frac"] <= 0.32]
 
-    # --- Export CSV ---
+    # --- [New Feature] Export Source Data ---
     csv_out = os.path.join(root_dir, "figures", "energy_battles", f"{dataset_name}_efficiency_battle.csv")
     _ensure_parent_dir(csv_out)
-    df_save = df[["selected_frac", "log_energy", "strategy"]].rename(
+    df[["selected_frac", "log_energy", "strategy"]].rename(
         columns={"selected_frac": "Fraction", "log_energy": "Log10_Energy", "strategy": "Strategy"}
-    )
-    df_save.to_csv(csv_out, index=False)
+    ).to_csv(csv_out, index=False)
 
-    # --- Drawing ---
+    # Drawing Logic
     fig = plt.figure(figsize=STD_FIG_SIZE)
     draw_order = ["HyperDriver", "BC", "DC", "EC", "Random"]
+    strategies = df["strategy"].unique()
+
     for strat in draw_order:
+        if strat not in strategies: continue
         sub = df[df["strategy"] == strat].sort_values("selected_frac")
-        if sub.empty: continue
-        plt.plot(sub["selected_frac"], sub["log_energy"], label=strat, color=STRATEGY_COLORS.get(strat, "black"),
-                 linewidth=1.2 if strat == "HyperDriver" else 1.0,
-                 linestyle="-" if strat == "HyperDriver" else ("--" if strat == "Random" else "-."),
-                 marker="o" if strat == "HyperDriver" else None, zorder=10 if strat == "HyperDriver" else 1)
+        color = STRATEGY_COLORS.get(strat, "black")
+        lw = 1.2 if strat == "HyperDriver" else 1.0
+        ls = "-" if strat == "HyperDriver" else ("--" if strat == "Random" else "-.")
+        marker = "o" if strat == "HyperDriver" else None
+        zorder = 10 if strat == "HyperDriver" else 1
+
+        plt.plot(sub["selected_frac"], sub["log_energy"], label=strat, color=color, 
+                 linewidth=lw, linestyle=ls, marker=marker, markersize=3.5, zorder=zorder)
 
     plt.xlabel("Fraction of Driver Nodes (Top 30%)")
     plt.ylabel("Log10(Control Energy Cost)")
     plt.title(f"Efficiency: {dataset_name}")
     plt.xlim(0.0, 0.3)
-    plt.legend(frameon=True, loc="best", labelspacing=0.2, borderpad=0.2, edgecolor="gray").get_frame().set_linewidth(0.8)
+    plt.legend(frameon=True, loc="best", labelspacing=0.2, borderpad=0.2, edgecolor="gray", framealpha=0.9).get_frame().set_linewidth(0.8)
     plt.tight_layout()
+    
     save_publication_figure(fig, os.path.join(root_dir, "figures", "energy_battles", f"{dataset_name}_efficiency_battle.png"))
     plt.close()
-    print(f"    [SAVE] Exported: {dataset_name}_efficiency_battle (.png, .pdf, .csv)")
+    print(f"[SAVE] Saved Efficiency Plot & CSV for {dataset_name}")
 
 def plot_ablation_battle(root_dir: str, dataset_name: str):
     csv_path = os.path.join(root_dir, "results", dataset_name, "full", "efficiency_battle.csv")
@@ -135,35 +139,34 @@ def plot_ablation_battle(root_dir: str, dataset_name: str):
     df["log_energy"] = np.log10(df["energy_cost"] + 1e-9)
     df = df[df["selected_frac"] <= 0.32]
 
-    # --- Export CSV ---
+    # --- [Added] Export Source Data ---
     csv_out = os.path.join(root_dir, "figures", "ablation_battles", f"{dataset_name}_ablation_battle.csv")
     _ensure_parent_dir(csv_out)
-    df_save = df[["selected_frac", "log_energy", "strategy"]].rename(
+    df[["selected_frac", "log_energy", "strategy"]].rename(
         columns={"selected_frac": "Fraction", "log_energy": "Log10_Energy", "strategy": "Strategy"}
-    )
-    df_save.to_csv(csv_out, index=False)
+    ).to_csv(csv_out, index=False)
 
-    # --- Drawing ---
     fig = plt.figure(figsize=STD_FIG_SIZE)
     draw_order = ["HyperDriver", "w/o Greedy", "w/o Hypergraph", "w/o Dynamics"]
     for strat in draw_order:
         sub = df[df["strategy"] == strat].sort_values("selected_frac")
         if sub.empty: continue
-        plt.plot(sub["selected_frac"], sub["log_energy"], label=strat, color=STRATEGY_COLORS.get(strat, "black"),
-                 linewidth=1.2 if strat == "HyperDriver" else 1.0,
-                 linestyle="-" if strat == "HyperDriver" else "--",
-                 marker="o" if strat == "HyperDriver" else None, alpha=1.0 if strat == "HyperDriver" else 0.8,
-                 zorder=10 if strat == "HyperDriver" else 1)
+        color = STRATEGY_COLORS.get(strat, "black")
+        lw, ls, marker, alpha, zorder = (1.2, "-", "o", 1.0, 10) if strat == "HyperDriver" else (1.0, "--", None, 0.8, 1)
+
+        plt.plot(sub["selected_frac"], sub["log_energy"], label=strat, color=color,
+                 linewidth=lw, linestyle=ls, marker=marker, markersize=3.5, alpha=alpha, zorder=zorder)
 
     plt.xlabel("Fraction of Driver Nodes (Top 30%)")
     plt.ylabel("Log10(Control Energy Cost)")
     plt.title(f"Ablation: {dataset_name}")
     plt.xlim(0.0, 0.3)
-    plt.legend(frameon=True, loc="best", labelspacing=0.2, borderpad=0.2, edgecolor="gray").get_frame().set_linewidth(0.8)
+    plt.legend(frameon=True, loc="best", labelspacing=0.2, borderpad=0.2, edgecolor="gray", framealpha=0.9).get_frame().set_linewidth(0.8)
     plt.tight_layout()
+    
     save_publication_figure(fig, os.path.join(root_dir, "figures", "ablation_battles", f"{dataset_name}_ablation_battle.png"))
     plt.close()
-    print(f"    [SAVE] Exported: {dataset_name}_ablation_battle (.png, .pdf, .csv)")
+    print(f"[SAVE] Saved Ablation Plot & CSV for {dataset_name}")
 
 def plot_top_drivers_ki(root_dir: str, dataset_name: str, top_k=10):
     scores_path = os.path.join(root_dir, "results", dataset_name, "full", "node_scores.csv")
@@ -179,17 +182,15 @@ def plot_top_drivers_ki(root_dir: str, dataset_name: str, top_k=10):
         if "essential" not in df.columns: df["essential"] = 0
 
     df = df.sort_values("driver_score", ascending=False).head(top_k)
-
-    # --- Export CSV ---
+    
+    # --- [Added] Export Source Data ---
     csv_out = os.path.join(root_dir, "figures", "top_drivers", f"{dataset_name}_top_drivers.csv")
     _ensure_parent_dir(csv_out)
-    df_save = df[["protein", "driver_score", "essential"]].rename(
+    df[["protein", "driver_score", "essential"]].rename(
         columns={"protein": "Protein", "driver_score": "Driver_Score", "essential": "Is_Essential"}
-    )
-    df_save.to_csv(csv_out, index=False)
+    ).to_csv(csv_out, index=False)
 
-    # --- Drawing ---
-    plot_df = df.iloc[::-1]
+    plot_df = df.iloc[::-1] # Drawing needs to be done from bottom to top.
     proteins = plot_df["protein"].astype(str).tolist()
     vals = plot_df["driver_score"].values
     colors = ["#7f7f7f" if e == 1 else "#ff7f0e" for e in plot_df["essential"].fillna(0).values]
@@ -199,15 +200,17 @@ def plot_top_drivers_ki(root_dir: str, dataset_name: str, top_k=10):
     plt.yticks(range(len(proteins)), proteins)
     plt.xlabel(r"Driver Score ($K_i$)")
     plt.title(f"Top {top_k} Drivers ({dataset_name})")
+    
     legend_elements = [Patch(facecolor="#7f7f7f", label="Essential"), Patch(facecolor="#ff7f0e", label="Non-Essential")]
-    plt.legend(handles=legend_elements, loc="lower right", frameon=True, borderpad=0.3, fontsize=7).get_frame().set_linewidth(0.8)
+    plt.legend(handles=legend_elements, loc="lower left", frameon=True, borderpad=0.3, framealpha=0.5, edgecolor="gray").get_frame().set_linewidth(0.5)
     plt.tight_layout()
+    
     save_publication_figure(fig, os.path.join(root_dir, "figures", "top_drivers", f"{dataset_name}_top_drivers.png"))
     plt.close()
-    print(f"    [SAVE] Exported: {dataset_name}_top_drivers (.png, .pdf, .csv)")
+    print(f"[SAVE] Saved Top Drivers Plot & CSV for {dataset_name}")
 
 # ============================
-# 3. Global summary drawing
+# 3. Global summary plotting and data export
 # ============================
 
 def plot_global_efficiency_boxplot(df: pd.DataFrame, out_dir: str):
@@ -215,65 +218,62 @@ def plot_global_efficiency_boxplot(df: pd.DataFrame, out_dir: str):
     main_strats = ["HyperDriver", "BC", "DC", "EC", "Random"]
     sub_df = df[df["Strategy"].isin(main_strats)].copy()
     
-    os.makedirs(out_dir, exist_ok=True)
-    csv_name = "global_efficiency_summary.csv"
-    sub_df.rename(columns={"MeanLogEnergy": "Avg_Log10_Energy"}).to_csv(os.path.join(out_dir, csv_name), index=False)
+    # Export Summary CSV
+    sub_df.to_csv(os.path.join(out_dir, "global_efficiency_summary.csv"), index=False)
 
     fig = plt.figure(figsize=STD_FIG_SIZE)
     order = ["HyperDriver", "BC", "DC", "EC", "Random"]
     sns.boxplot(data=sub_df, x="Strategy", y="MeanLogEnergy", order=order, palette=STRATEGY_COLORS, width=0.6, linewidth=1.0, showfliers=False)
     sns.stripplot(data=sub_df, x="Strategy", y="MeanLogEnergy", order=order, color=".3", size=3, alpha=0.6, jitter=True)
     plt.ylabel("Mean Log10 Energy Cost")
+    plt.xlabel("")
     plt.title("Global Efficiency Comparison")
     plt.xticks(rotation=20)
     plt.tight_layout()
     save_publication_figure(fig, os.path.join(out_dir, "global_efficiency_summary.png"))
     plt.close()
-    print(f"  [SUMMARY] Exported: global_efficiency_summary (.png, .pdf, .csv)")
 
 def plot_global_ablation_boxplot(df: pd.DataFrame, out_dir: str):
     if df.empty: return
     ablation_strats = ["HyperDriver", "w/o Greedy", "w/o Hypergraph", "w/o Dynamics"]
     sub_df = df[df["Strategy"].isin(ablation_strats)].copy()
-
-    os.makedirs(out_dir, exist_ok=True)
-    csv_name = "global_ablation_summary.csv"
-    sub_df.rename(columns={"MeanLogEnergy": "Avg_Log10_Energy"}).to_csv(os.path.join(out_dir, csv_name), index=False)
+    
+    # Export Summary CSV
+    sub_df.to_csv(os.path.join(out_dir, "global_ablation_summary.csv"), index=False)
 
     fig = plt.figure(figsize=STD_FIG_SIZE)
     order = ["HyperDriver", "w/o Greedy", "w/o Hypergraph", "w/o Dynamics"]
     sns.boxplot(data=sub_df, x="Strategy", y="MeanLogEnergy", order=order, palette=STRATEGY_COLORS, width=0.6, linewidth=1.0, showfliers=False)
     sns.stripplot(data=sub_df, x="Strategy", y="MeanLogEnergy", order=order, color=".3", size=3, alpha=0.6, jitter=True)
     plt.ylabel("Mean Log10 Energy Cost")
+    plt.xlabel("")
     plt.title("Global Ablation Summary")
     plt.xticks(rotation=20)
     plt.tight_layout()
     save_publication_figure(fig, os.path.join(out_dir, "global_ablation_summary.png"))
     plt.close()
-    print(f"  [SUMMARY] Exported: global_ablation_summary (.png, .pdf, .csv)")
 
 def plot_global_driver_composition(df: pd.DataFrame, out_dir: str):
     if df.empty: return
     
-    os.makedirs(out_dir, exist_ok=True)
-    csv_name = "global_driver_composition.csv"
-    df.rename(columns={"EssentialFrac": "Essential_Fraction"}).to_csv(os.path.join(out_dir, csv_name), index=False)
+    # Export Summary CSV
+    df.to_csv(os.path.join(out_dir, "global_driver_composition.csv"), index=False)
 
     fig = plt.figure(figsize=STD_FIG_SIZE)
     order = ["HyperDriver", "BC", "DC", "EC", "Random"]
     sns.boxplot(data=df, x="Strategy", y="EssentialFrac", order=order, palette=STRATEGY_COLORS, width=0.6, linewidth=1.0, showfliers=False)
     sns.stripplot(data=df, x="Strategy", y="EssentialFrac", order=order, color=".3", size=3, alpha=0.6, jitter=True)
     plt.ylabel("Essential Fraction (in Top-20)")
+    plt.xlabel("")
     plt.title("Driver Essentiality Composition")
     plt.ylim(0, 1.05)
     plt.xticks(rotation=20)
     plt.tight_layout()
     save_publication_figure(fig, os.path.join(out_dir, "global_driver_composition.png"))
     plt.close()
-    print(f"  [SUMMARY] Exported: global_driver_composition (.png, .pdf, .csv)")
 
 # ============================
-# 4. Data collection logic
+# 4. Data collection
 # ============================
 
 def collect_efficiency_metrics(root_dir: str, dataset_list: list) -> pd.DataFrame:
@@ -317,7 +317,7 @@ def collect_driver_composition(root_dir: str, dataset_list: list, top_k: int = 2
     return pd.DataFrame(records)
 
 # ============================
-# 5. main entrance
+# 5. Main program entry point
 # ============================
 
 def main():
@@ -328,31 +328,25 @@ def main():
     root_dir = os.path.dirname(os.path.abspath(__file__))
     dataset_list = load_datasets_config(os.path.join(root_dir, "conf", "datasets.json")) if args.dataset == "all" else [args.dataset]
 
-    print("\n" + "="*60)
-    print("  HYPERDRIVER: GENERATING PUBLICATION FIGURES & SOURCE DATA")
-    print("="*60)
-
-    for i, ds in enumerate(dataset_list, 1):
-        print(f"\n[PROCESS {i}/{len(dataset_list)}] Processing Dataset: {ds}")
+    print("\n========== Generating Figures & Source Data ==========")
+    for ds in dataset_list:
         plot_efficiency_battle(root_dir, ds)
         plot_ablation_battle(root_dir, ds)
         plot_top_drivers_ki(root_dir, ds, top_k=10)
-        print(f"    [SUCCESS] All artifacts generated for {ds}")
 
     if args.dataset == "all":
-        print("\n" + "-"*60)
-        print("[AGGREGATING] Computing Global Statistics Across All Datasets...")
+        print("\n[AGGREGATING] Creating Global Summaries...")
         eff_df = collect_efficiency_metrics(root_dir, dataset_list)
         comp_df = collect_driver_composition(root_dir, dataset_list)
         out_dir = os.path.join(root_dir, "figures", "global_summary")
+        os.makedirs(out_dir, exist_ok=True)
         
         plot_global_efficiency_boxplot(eff_df, out_dir)
         plot_global_ablation_boxplot(eff_df, out_dir)
         plot_global_driver_composition(comp_df, out_dir)
-        print("-"*60)
+        print(f"[SUCCESS] Global Source Data saved in: {out_dir}")
 
-    print("\n[DONE] All tasks completed successfully.")
-    print(f"Results are available in: {os.path.join(root_dir, 'figures')}\n")
+    print("\n[DONE] All tasks completed successfully.\n")
 
 if __name__ == "__main__":
     main()
