@@ -1,10 +1,10 @@
 # train_hyperdriver.py
 """
-Step 3: 训练 HyperDriver 模型 (Clean & Fixed Version)
-功能：
-1. 只训练 "full" 变体 (配合 V16+ 推理消融策略)。
-2. 包含完整的鲁棒数据加载逻辑 (索引越界检查)。
-3. 修复了之前的语法错误。
+Step 3: Train the HyperDriver Model (Clean & Fixed Version)
+Features:
+1. Train only the "full" variant (in conjunction with inference ablation strategies).
+2. Includes complete robust data loading logic (index out-of-bounds checking).
+3. Fixed previous syntax errors.
 """
 
 import argparse
@@ -32,7 +32,7 @@ def get_device() -> torch.device:
     return torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 # ============================
-# 数据构建函数
+# Data construction functions
 # ============================
 
 def build_inputs_with_alignment(
@@ -41,7 +41,7 @@ def build_inputs_with_alignment(
     device: torch.device,
 ) -> Tuple[torch.Tensor, torch.Tensor, List[Optional[torch.Tensor]], torch.Tensor, pd.DataFrame]:
     """
-    构造模型输入，并将动态图(Teacher)的权重对齐到静态骨架上。
+    Construct the model input and align the weights of the dynamic graph (Teacher) to the static skeleton.
     """
     proc_dir = os.path.join(root_dir, "processed", dataset_name)
     nodes_path = os.path.join(proc_dir, "nodes.csv")
@@ -124,7 +124,7 @@ def build_inputs_with_alignment(
     return x_seq, static_edge_index, teacher_weights_list, labels, nodes_df
 
 # ============================
-# 训练主逻辑 (Full Model Only)
+# Training main logic (Full Model Only)
 # ============================
 
 def train_full_model(
@@ -136,7 +136,7 @@ def train_full_model(
     hidden_dim: int = 64,
     seed: int = 42
 ):
-    """只训练 Full Model"""
+    """Training only Full Model"""
     device = get_device()
     set_seed(seed)
     

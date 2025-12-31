@@ -10,12 +10,12 @@ import pandas as pd
 
 
 # ============================
-# 配置 & 路径管理
+# Configuration & Path Management
 # ============================
 
 @dataclass
 class DatasetPaths:
-    """单个数据集的原始文件路径描述"""
+    """Description of the original file paths for a single dataset"""
     name: str
     root: str  # e.g. D:/HYPERDRIVER
     data_dir: str  # e.g. D:/HYPERDRIVER/data/Hazbun
@@ -39,8 +39,8 @@ class DatasetPaths:
 
 def load_datasets_config(conf_path: str) -> List[str]:
     """
-    从 conf/datasets.json 读取启用的数据集列表。
-    只返回 enabled == true 的 name。:contentReference[oaicite:8]{index=8}
+    Read the list of enabled datasets from conf/datasets.json.
+    Only return the name where enabled == true. :contentReference[oaicite:8]{index=8}
     """
     with open(conf_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
@@ -54,23 +54,22 @@ def load_datasets_config(conf_path: str) -> List[str]:
 
 def get_dataset_paths(root_dir: str, dataset_name: str) -> DatasetPaths:
     """
-    构造某个数据集的路径。root_dir 通常为 D:/HYPERDRIVER
+    Construct the path for a dataset. The root_dir is typically D:/HYPERDRIVER.
     """
     data_dir = os.path.join(root_dir, "data", dataset_name)
     return DatasetPaths(name=dataset_name, root=root_dir, data_dir=data_dir)
 
 
 # ============================
-# Label & Node feature 处理
+# Label & Node feature deal with
 # ============================
 
 def load_global_labels(root_dir: str) -> pd.DataFrame:
     """
-    读取全局的 Node_Labels_with_essential.csv。
-
-    你的实际文件列大概是：
+    Read the global Node_Labels_with_essential.csv file.
+    Your actual file columns will likely be:
     ['Node', 'Label', 'SGD', 'OGEE', 'DEG', 'SOD', 'essential']
-    我们把 'Node' 当成 protein/ORF ID，'essential' 当成必需标记。:contentReference[oaicite:9]{index=9}
+    We treat 'Node' as the protein/ORF ID and 'essential' as the required label. :contentReference[oaicite:9]{index=9}
     """
     label_path = os.path.join(root_dir, "data", "Node_Labels_with_essential.csv")
     if not os.path.exists(label_path):
@@ -79,7 +78,7 @@ def load_global_labels(root_dir: str) -> pd.DataFrame:
     df = pd.read_csv(label_path)
     col_map = {c.lower(): c for c in df.columns}
 
-    # protein / gene id 列：兼容 'Node', 'protein', 'orf', 'gene'
+    # protein / gene id Column: Compatibility 'Node', 'protein', 'orf', 'gene'
     protein_col = None
     for key in ["node", "protein", "orf", "gene", "label"]:
         if key in col_map:
@@ -105,19 +104,19 @@ def load_global_labels(root_dir: str) -> pd.DataFrame:
     df = df[[protein_col, ess_col]].copy()
     df.columns = ["protein", "essential"]
 
-    # 保守处理：非 0 视为必需
+    # Conservative approach: Non-zero values ​​are considered necessary.
     df["essential"] = (df["essential"] != 0).astype(int)
     return df
 
 
 def load_node_features(path: str) -> pd.DataFrame:
     """
-    读取 Node_Features.txt。:contentReference[oaicite:10]{index=10}
+    Read Node_Features.txt。:contentReference[oaicite:10]{index=10}
 
-    从你提供的 Hazbun 片段看，格式是逗号分隔：
+    Based on the Hazbun snippet you provided, the format is comma-separated:
         idx, ORF, t1, t2, ..., t36
 
-    所以这里按 CSV（header=None）读取，并自动命名：
+    Therefore, it is read as a CSV file (header=None) and automatically named:
         index, protein, t1..tN
     """
     df = pd.read_csv(path, header=None)
@@ -132,8 +131,8 @@ def load_node_features(path: str) -> pd.DataFrame:
 
 def build_index_mapping(node_feat_df: pd.DataFrame) -> Tuple[Dict[int, str], Dict[str, int]]:
     """
-    从 Node_Features 里构建 index <-> protein 映射。
-    返回：
+    Build an index <-> protein mapping from Node_Features.
+    return:
         index_to_protein: {0: 'YER127W', ...}
         protein_to_index: {'YER127W': 0, ...}
     """
@@ -150,8 +149,8 @@ def merge_features_and_labels(
     global_labels_df: pd.DataFrame
 ) -> pd.DataFrame:
     """
-    把 Node_Features 与全局 Essential 标签按 protein 合并。
-    未出现在 label 表中的蛋白，默认 essential=0。
+    Merge Node_Features with the global Essential tag by protein.
+    Proteins that do not appear in the label table are assigned an essential value of 0 by default.
     """
     nodes_df = node_feat_df.copy()
     labels_df = global_labels_df.copy()
@@ -162,16 +161,16 @@ def merge_features_and_labels(
 
 
 # ============================
-# 边列表读取
+# Edge list reading
 # ============================
 
 def load_static_edges(path: str) -> pd.DataFrame:
     """
-    读取 Static_PPIN.txt。:contentReference[oaicite:11]{index=11}
+    Read Static_PPIN.txt. :contentReference[oaicite:11]{index=11}
 
-    从 Hazbun 片段看，格式是：
+    Judging from the Hazbun clip, the format is:
         source_protein   target_protein   weight
-    使用任意空白分隔。
+    Use any whitespace as a separator.
     """
     df = pd.read_csv(path, sep=r"\s+", header=None)
     if df.shape[1] < 3:
@@ -183,11 +182,11 @@ def load_static_edges(path: str) -> pd.DataFrame:
 
 def load_dynamic_edges(path: str) -> pd.DataFrame:
     """
-    读取 Dynamic_PPIN.txt。:contentReference[oaicite:12]{index=12}
+    Read Dynamic_PPIN.txt。:contentReference[oaicite:12]{index=12}
 
-    从片段看，格式为逗号分隔：
+    Judging from the fragment, the format is comma-separated:
         src_idx, dst_idx, t, weight
-    为了更稳妥，使用正则兼容逗号或空白。
+    For added security, use regular expressions that are compatible with commas or whitespace.
     """
     df = pd.read_csv(path, sep=r"\s+|,", engine="python", header=None)
     if df.shape[1] < 4:
@@ -202,13 +201,13 @@ def map_static_edges_to_indices(
     protein_to_index: Dict[str, int]
 ) -> pd.DataFrame:
     """
-    把 Static_PPIN 中的 protein ID 映射成 index（与 Node_Features 保持一致）。
+    Map the protein IDs in Static_PPIN to indices (consistent with Node_Features).
     """
     df = static_df.copy()
     df["src_idx"] = df["src"].map(protein_to_index)
     df["dst_idx"] = df["dst"].map(protein_to_index)
 
-    # 过滤掉无法映射的边
+    # Filter out edges that cannot be mapped
     df = df.dropna(subset=["src_idx", "dst_idx"])
     df["src_idx"] = df["src_idx"].astype(int)
     df["dst_idx"] = df["dst_idx"].astype(int)
@@ -216,34 +215,34 @@ def map_static_edges_to_indices(
 
 
 # ============================
-# 统一预处理入口
+# Unified preprocessing entry point
 # ============================
 
 def preprocess_single_dataset(root_dir: str, dataset_name: str) -> None:
     """
-    预处理单个数据集：
-    - 读取 Node_Features, Static_PPIN, Dynamic_PPIN
-    - 对齐全局 essential 标签
-    - 生成 processed/<dataset>/nodes.csv, static_edges.csv, dynamic_edges.csv
+    Preprocessing a single dataset:
+    - Read Node_Features, Static_PPIN, Dynamic_PPIN
+    - Align global essential labels
+    - Generate processed/<dataset>/nodes.csv, static_edges.csv, dynamic_edges.csv
     """
     paths = get_dataset_paths(root_dir, dataset_name)
 
-    # 1) 加载节点特征 & 映射
+    # 1) Load node features & mapping
     node_feat_df = load_node_features(paths.node_features)
     index_to_protein, protein_to_index = build_index_mapping(node_feat_df)
 
-    # 2) 加载全局 Essential 标签，并合并到节点表
+    # 2) Load the global Essential tags and merge them into the node table.
     global_labels_df = load_global_labels(root_dir)
     nodes_merged = merge_features_and_labels(node_feat_df, global_labels_df)
 
-    # 3) 加载静态边，并映射到 index
+    # 3) Load static edges and map them to index.
     static_df = load_static_edges(paths.static_ppin)
     static_idx_df = map_static_edges_to_indices(static_df, protein_to_index)
 
-    # 4) 加载动态边（已经是 index 形式）
+    # 4) Load dynamic edges (already in index form)
     dyn_df = load_dynamic_edges(paths.dynamic_ppin)
 
-    # 5) 保存到 processed/<dataset> 目录
+    # 5) Save to the processed/<dataset> directory
     os.makedirs(paths.processed_dir, exist_ok=True)
     nodes_out = os.path.join(paths.processed_dir, "nodes.csv")
     static_out = os.path.join(paths.processed_dir, "static_edges.csv")

@@ -1,10 +1,10 @@
 # eval_driver.py
 """
-Step 4: HyperDriver 综合评测 (Clean V16.3)
-功能：
-1. 仅加载 "full" 模型 (不再寻找其他变体)。
-2. 执行 Efficiency Battle (主实验)。
-3. 执行 Ablation Study (推理时消融)。
+Step 4: HyperDriver Comprehensive Evaluation
+Features:
+1. Load only the "full" model (no longer searching for other variants).
+2. Execute the Efficiency Battle (main experiment).
+3. Execute the Ablation Study (ablation during inference).
 """
 
 import argparse
@@ -52,7 +52,7 @@ def eval_dataset(root_dir: str, dataset_name: str, args):
     print(f"\n========== Evaluating: {dataset_name} ==========")
     device = get_device()
     
-    # [Clean] 只加载 full checkpoint
+    # [Clean] Load only full checkpoint
     ckpt_path = os.path.join(root_dir, "checkpoints", f"{dataset_name}_full.pt")
     res_dir = os.path.join(root_dir, "results", dataset_name, "full") 
     os.makedirs(res_dir, exist_ok=True)
@@ -85,7 +85,7 @@ def eval_dataset(root_dir: str, dataset_name: str, args):
     model.load_state_dict(checkpoint["model_state"])
     model.eval()
 
-    # 1. 提取结构
+    # 1. Extracting Structure
     print("[1/6] Extracting Learned Structures...")
     with torch.no_grad():
         avg_weights, avg_hyper_adj, g = model.get_consensus_structure(x_seq, edge_index)
@@ -114,7 +114,7 @@ def eval_dataset(root_dir: str, dataset_name: str, args):
 
     # 3. HyperDriver (Full)
     print("[3/6] Simulating HyperDriver (Full)...")
-    # 存下分数供 Top-20 Plot 使用
+    # Save the scores for use in the Top-20 Plot.
     graph_struct = load_graph_adj_list(root_dir, dataset_name)
     _, W_mix_full = build_time_averaged_matrices(N, edge_index_np, avg_weights_np, avg_hyper_adj_np, g_np)
     K_score, S, AC, F = compute_node_driver_scores(L_mix_full, W_mix_full, graph_struct)
@@ -124,7 +124,7 @@ def eval_dataset(root_dir: str, dataset_name: str, args):
     nodes_df["score_AC"] = AC
     nodes_df.to_csv(os.path.join(res_dir, "node_scores.csv"), index=False)
 
-    # 跑 Greedy 仿真
+    # Running Greedy simulation
     df_hd = simulate_control_efficiency(L_mix_full, None, args.attack_steps, "HyperDriver")
     df_hd["strategy"] = "HyperDriver (Full)"
     battle_strategies.append(df_hd)

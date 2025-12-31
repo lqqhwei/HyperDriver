@@ -1,10 +1,9 @@
 # src/control_engine.py
 """
-V15.1 Control Engine: Stochastic Broad Greedy
-修正 V15.0 的"精英陷阱"。
-不再局限于高 AC 候选池，而是每一步随机采样大量节点进行试错。
-原理：min(200 random samples) 必然优于 Random (1 sample)。
-这保证了 Efficiency Battle 中红线位于最下方。
+Control Engine: Stochastic Broad Greedy. This corrects the previous "elite trap."
+It no longer limits itself to a high-AC candidate pool, but instead randomly samples a large number of nodes for trial and error at each step.
+Principle: min(200 random samples) is always better than Random(1 sample).
+This ensures that the red line is at the bottom in the Efficiency Battle.
 """
 
 import os
@@ -127,7 +126,7 @@ def compute_node_driver_scores(
 
 
 # ============================
-# 4. 效率评测 (V15.1 Stochastic Greedy)
+# 4. Efficiency Evaluation (V15.1 Stochastic Greedy)
 # ============================
 
 def simulate_control_efficiency(
@@ -137,7 +136,7 @@ def simulate_control_efficiency(
     strategy_name: str = "HyperDriver"
 ) -> pd.DataFrame:
     """
-    如果 strategy == HyperDriver, 使用广域随机贪心算法。
+    If strategy == HyperDriver, use a wide-area randomized greedy algorithm.
     """
     N = L_mix.shape[0]
     
@@ -170,10 +169,10 @@ def simulate_control_efficiency(
         selected_indices = []
         current_proj = np.zeros(len(lambdas))
         
-        # 只跑前 30%
+        # Only the top 30%
         max_k = int(N * 0.35) 
         
-        # 记录点
+        # Recording point
         record_points = set()
         for step_idx in range(1, steps + 1):
             k = int(round((step_idx / steps) * N))
@@ -181,19 +180,19 @@ def simulate_control_efficiency(
             
         current_energy = 1e9
         
-        # 维护剩余节点集合
+        # Maintain the set of remaining nodes
         remaining_nodes = list(range(N))
         
         for k in range(1, max_k + 1):
-            # V15.1 Fix: 随机抽样 200 个候选者 (不再局限于 Top AC)
-            # 这保证了多样性和广度，避开局部最优
+            # Fix: Randomly sample 200 candidates (no longer limited to Top AC)
+            # This ensures diversity and breadth, avoiding local optima.
             n_sample = min(200, len(remaining_nodes))
             candidates = np.random.choice(remaining_nodes, n_sample, replace=False)
             
             local_best_node = -1
             min_E = 1e20
             
-            # 贪心搜索
+            # Greedy search
             for node in candidates:
                 new_proj = current_proj + V_sq[node]
                 # Fast Energy Calc
@@ -203,7 +202,7 @@ def simulate_control_efficiency(
                     min_E = e_val
                     local_best_node = node
             
-            # 选中最优者
+            # Select the best one
             selected_indices.append(local_best_node)
             remaining_nodes.remove(local_best_node) # Python remove is O(N), but tolerable here
             

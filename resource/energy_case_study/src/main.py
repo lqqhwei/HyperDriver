@@ -5,19 +5,19 @@ import pandas as pd
 from tqdm import tqdm
 from pathlib import Path
 
-# 导入之前的模块
+# Import previous modules
 from data_loader import DataLoader
 from utils_graph import SubgraphSelector
 from methods import DriverSelector
 from control_energy import ControlEnergyCalculator
 
-# 配置
+# Configuration
 ROOT = Path(__file__).resolve().parents[3]
 OUTPUT_DIR = ROOT / "resource/energy_case_study/output"
 STATIC_DIR = ROOT / "data/Yu"
 LABEL_DIR = ROOT / "data"
-TOP_K = 10               # 在子图中选 10 个驱动节点
-RANDOM_RUNS = 20         # 随机策略跑20次取平均
+TOP_K = 10               # Select 10 driving nodes in the subgraph
+RANDOM_RUNS = 20         # Run the randomized strategy 20 times and take the average.
 
 def setup_dirs():
     if not os.path.exists(OUTPUT_DIR):
@@ -25,7 +25,7 @@ def setup_dirs():
 
 def plot_results(results, subgraph_name="Case_Study"):
     """
-    绘制能量对比柱状图 (Log Scale)
+    Plot an energy comparison histogram (Log Scale)
     """
     methods = list(results.keys())
     energies = list(results.values())
@@ -53,25 +53,25 @@ def plot_results(results, subgraph_name="Case_Study"):
 
 def main():
     setup_dirs()
-    print("🚀 Starting True Minimum Energy Case Study Experiment...")
+    print("Starting True Minimum Energy Case Study Experiment...")
     
-    # 1. 加载全图
+    # 1. Load full image
     loader = DataLoader(STATIC_DIR, LABEL_DIR)
     G_full = loader.load_static_graph()
     
-    # 2. 提取 Case Study 子图
+    # 2. Extracting the Case Study Subgraph
     selector = SubgraphSelector(G_full, target_size=(60, 120))
     G_sub, A_sub, sub_nodes, sub_map = selector.get_best_subgraph()
     
-    print(f"\n🔬 Case Study Subgraph Selected: {len(sub_nodes)} nodes")
+    print(f"\n Case Study Subgraph Selected: {len(sub_nodes)} nodes")
     
-    # 3. 初始化选择器和计算器
+    # 3. Initialize the selector and calculator
     driver_selector = DriverSelector(G_sub, A_sub, sub_nodes)
     energy_calc = ControlEnergyCalculator(A_sub)
     
     results = {}
     
-    # --- [核心修改点：记录被选中的索引] ---
+    # --- [Key change: Record the selected index] ---
     selection_map = {
         'Protein_Name': sub_nodes,
         'HyperDriver': np.zeros(len(sub_nodes), dtype=int),
@@ -86,7 +86,7 @@ def main():
     idx_hd, names_hd = driver_selector.select_hyperdriver_proxy(TOP_K)
     energy_hd = energy_calc.compute_energy(idx_hd)
     results['HyperDriver'] = energy_hd
-    selection_map['HyperDriver'][idx_hd] = 1 # 标记选中
+    selection_map['HyperDriver'][idx_hd] = 1 # Mark selected
 
     # ==========================
     # Method 2: Degree Centrality
@@ -95,16 +95,16 @@ def main():
     idx_deg, names_deg = driver_selector.select_degree(TOP_K)
     energy_deg = energy_calc.compute_energy(idx_deg)
     results['Degree (Hub)'] = energy_deg
-    selection_map['Degree'][idx_deg] = 1 # 标记选中
+    selection_map['Degree'][idx_deg] = 1 # Mark selected
 
     # ==========================
     # Method 3: Random Baseline (Avg for plot, One instance for CSV)
     # ==========================
     print(f"\n[3] Running Random Selection ({RANDOM_RUNS} runs)...")
     random_energies = []
-    sample_random_idx = None # 用于存储 20 次中随机选出的一份结果
+    sample_random_idx = None # Used to store a result randomly selected from 20 trials.
     
-    # 随机选择 20 次中的一个索引（例如第 0 次，或者随机一次）
+    # Randomly select one index from 20 selections (e.g., selection 0, or random selection once).
     target_random_run = np.random.randint(0, RANDOM_RUNS)
     
     for i in tqdm(range(RANDOM_RUNS)):
@@ -113,31 +113,31 @@ def main():
         if e != float('inf'):
             random_energies.append(e)
         
-        # 保存指定的那一次随机结果到 CSV 标记位
+        # Save the specified random result to the CSV tag.
         if i == target_random_run:
             sample_random_idx = idx_rnd
     
     avg_random_energy = np.mean(random_energies) if random_energies else float('inf')
     results['Random'] = avg_random_energy
-    selection_map['Random'][sample_random_idx] = 1 # 标记选中
+    selection_map['Random'][sample_random_idx] = 1 # Mark selected
 
     # ==========================
-    # 4. 结果汇总与导出
+    # 4. Results Summary and Export
     # ==========================
-    # 新增功能：保存节点选中状态表 (0/1 表)
+    # New feature: Save node selection status table (0/1 table)
     df_selection = pd.DataFrame(selection_map)
     selection_csv_path = os.path.join(OUTPUT_DIR, f"selection_nodes.csv")
     df_selection.to_csv(selection_csv_path, index=False)
-    print(f"✅ Node Selection Matrix saved to: {selection_csv_path}")
+    print(f"Node Selection Matrix saved to: {selection_csv_path}")
 
-    # 原有功能：保存能量汇总 CSV
+    # Existing function: Save energy summary CSV
     df_res = pd.DataFrame(list(results.items()), columns=['Method', 'Control_Energy_J'])
     csv_path = os.path.join(OUTPUT_DIR, f"energy_results.csv")
     df_res.to_csv(csv_path, index=False)
     
-    # 绘制图片
+    # Drawing pictures
     plot_results(results, subgraph_name=f"{len(sub_nodes)} nodes")
-    print("🏆 All tasks completed successfully.")
+    print("All tasks completed successfully.")
 
 if __name__ == "__main__":
     main()

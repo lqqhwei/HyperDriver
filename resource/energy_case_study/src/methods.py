@@ -5,9 +5,9 @@ import networkx as nx
 class DriverSelector:
     def __init__(self, G_sub, A_sub, node_list):
         """
-        G_sub: NetworkX 子图对象
-        A_sub: 子图邻接矩阵 (numpy array)
-        node_list: 节点名称列表 (与 A_sub 索引对应)
+        G_sub: NetworkX subgraph objects
+        A_sub: Subgraph adjacency matrix (NumPy array)
+        node_list: List of node names (corresponding to the A_sub index)
         """
         self.G = G_sub
         self.A = A_sub
@@ -16,7 +16,7 @@ class DriverSelector:
 
     def select_random(self, k, seed=42):
         """
-        [Benchmark 1] 随机选择 K 个节点
+        [Benchmark 1] Randomly select K nodes
         """
         random.seed(seed)
         indices = list(range(self.num_nodes))
@@ -25,13 +25,13 @@ class DriverSelector:
 
     def select_degree(self, k):
         """
-        [Benchmark 2] 基于度中心性 (Hubs) 选择 K 个节点
+        [Benchmark 2] Select K nodes based on degree centrality (Hubs)
         """
-        # 计算度数 (使用 NetworkX 或直接 sum(A))
+        # Calculate the degree (using NetworkX or directly sum(A)).
         degrees = np.sum(self.A, axis=1)
         
-        # 获取索引排序 (从大到小)
-        # argsort 默认从小到大，所以取反或切片[::-1]
+        # Retrieve index sorting (from largest to smallest)
+        # argsort sorts by default from smallest to largest, so inverting or slicing [::-1] is an option.
         sorted_indices = np.argsort(degrees)[::-1]
         
         selected_indices = sorted_indices[:k]
@@ -39,28 +39,28 @@ class DriverSelector:
 
     def select_hyperdriver_proxy(self, k):
         """
-        [HyperDriver Logic] 基于谱能量代理的选择
+        [HyperDriver Logic] Selection based on spectral energy proxy
         
-        论文依据: 
-        1. 能量代理 E ~ 1 / lambda_max (Section 2.4.2) [cite: 91]
-        2. 驱动评分 K_i ~ Delta E_i (Section 2.4.3) [cite: 100]
+        Thesis basis: 
+        1. Energy Proxy E ~ 1 / lambda_max (Section 2.4.2) [cite: 91]
+        2. Driver rating K_i ~ Delta E_i (Section 2.4.3) [cite: 100]
         
-        逻辑:
-        我们要找到那些"一旦移除，会导致网络能量 E 发生最大幅度恶化"的节点。
-        这意味着这些节点是维持当前网络"低能量可控状态"的关键支撑点(Anchors)。
-        因此，控制它们(Input)是最有效的。
+        logic:
+        We need to find those nodes that, if removed, would cause the network energy E to deteriorate the most.
+        This means that these nodes are the key anchors for maintaining the current "low-energy controllable state" of the network.
+        Therefore, controlling them (Input) is the most effective approach.
         """
         print("Calculating Spectral Energy Proxy scores...")
         
-        # 1. 计算原始拉普拉斯矩阵及其最大特征值
+        # 1. Calculate the original Laplacian matrix and its largest eigenvalue.
         # L = D - A
         D = np.diag(np.sum(self.A, axis=1))
         L_base = D - self.A
         
-        # 计算原始谱半径 (Largest Eigenvalue of Laplacian)
-        # 注意：对于无向图 L 是半正定，特征值皆为实数 >= 0
+        # Calculate the original spectral radius (Largest Eigenvalue of Laplacian)
+        # Note: For an undirected graph L, which is positive semi-definite, all eigenvalues ​​are real numbers >= 0.
         try:
-            # 使用 eigvalsh 计算对称矩阵特征值，速度更快且稳定
+            # Using eigvalsh to compute eigenvalues ​​of symmetric matrices is faster and more stable.
             evals_base = np.linalg.eigvalsh(L_base)
             lambda_max_base = np.max(evals_base)
         except np.linalg.LinAlgError:
@@ -68,11 +68,11 @@ class DriverSelector:
 
         scores = []
         
-        # 2. 遍历每个节点，计算"扰动后"的能量变化
+        # 2. Iterate through each node and calculate the energy change "after the perturbation".
         for i in range(self.num_nodes):
-            # 模拟移除节点 i:
-            # 在矩阵中删除第 i 行和第 i 列
-            # 实际上我们构建一个 (N-1)x(N-1) 的矩阵
+            # Simulate removing node i:
+            # Delete the i-th row and i-th column from the matrix.
+            # In fact, we construct an (N-1)x(N-1) matrix
             A_prime = np.delete(np.delete(self.A, i, axis=0), i, axis=1)
             D_prime_vals = np.sum(A_prime, axis=1)
             L_prime = np.diag(D_prime_vals) - A_prime
@@ -83,13 +83,13 @@ class DriverSelector:
             except:
                 lambda_max_prime = 0.0
             
-            # 计算评分:
-            # 依据论文，我们关注 Delta E. 
+            # Calculate the score:
+            # Based on the paper, we focus on Delta E.
             # E_base ~ 1/lambda_max_base
             # E_prime ~ 1/lambda_max_prime
-            # 如果节点重要，移除它会导致系统"更难控制" (Structure degrades), 
-            # 通常表现为 lambda_max 下降 (Connectivity/Stiffness drops).
-            # 导致 E_prime (1/small) 变得很大。
+            # If a node is important, removing it will make the system "more difficult to control" (Structure degrades), 
+            # This typically manifests as a decrease in lambda_max (Connectivity/Stiffness drops).
+            # This causes E_prime (1/small) to become very large.
             # Score = E_prime - E_base
             
             epsilon = 1e-9
@@ -99,15 +99,15 @@ class DriverSelector:
             delta_E = energy_prime - energy_base
             scores.append((i, delta_E))
             
-        # 3. 排序: 选择 Delta E 最大的节点 (即移除代价最高的节点)
+        # 3. Sort by selecting the node with the largest Delta E (i.e., the node with the highest removal cost).
         scores.sort(key=lambda x: x[1], reverse=True)
         
         selected_indices = [idx for idx, score in scores[:k]]
         return selected_indices, [self.nodes[i] for i in selected_indices]
 
-# 测试代码
+# Test code
 if __name__ == "__main__":
-    # 简单的 Mock 数据测试
+    # Simple Mock Data Test
     G_mock = nx.erdos_renyi_graph(20, 0.3, seed=42)
     A_mock = nx.to_numpy_array(G_mock)
     nodes_mock = [str(i) for i in range(20)]

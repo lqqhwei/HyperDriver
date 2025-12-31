@@ -1,7 +1,7 @@
 # src/layers.py
 """
-基础层模块 (V4.2 Memory Optimized - Sparse Implementation)
-解决 Babu/Gavin 等大数据集 OOM 问题
+Base layer module (V4.2 Memory Optimized - Sparse Implementation)
+Solving OOM problems on large datasets such as Babu/Gavin
 """
 
 from typing import Optional, Tuple, Union
@@ -12,7 +12,7 @@ import torch.nn.functional as F
 
 
 # ============================
-# [模块一] 动态边预测器 (Student)
+# [Module 1] Dynamic Edge Predictor (Student)
 # ============================
 class EdgePredictor(nn.Module):
     def __init__(self, in_channels: int, hidden_dim: int = 32):
@@ -34,7 +34,7 @@ class EdgePredictor(nn.Module):
 
 
 # ============================
-# [模块一] 图卷积层 (GCN)
+# [Module 1] Graph Convolutional Layers (GCN)
 # ============================
 class GraphConvLayer(nn.Module):
     def __init__(self, in_channels: int, out_channels: int, bias: bool = True):
@@ -69,11 +69,11 @@ class GraphConvLayer(nn.Module):
 
 
 # ============================
-# [模块二] 动态超图构建器 (Sparse Optimized)
+# [Module 2] Dynamic Hypergraph Builder (Sparse Optimized)
 # ============================
 class DynamicHypergraphBuilder(nn.Module):
     """
-    V4.2 优化：返回稀疏索引而不是稠密矩阵，解决 OOM。
+    Optimization: Return sparse indices instead of dense matrices to resolve OOM (Out of Memory) errors.
     """
     def __init__(self, k_neighbors: int = 10):
         super().__init__()
@@ -81,40 +81,40 @@ class DynamicHypergraphBuilder(nn.Module):
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        返回: H_sparse (torch.sparse_coo_tensor) [N, N]
+        Returns: H_sparse (torch.sparse_coo_tensor) [N, N]
         """
         N = x.size(0)
         device = x.device
 
-        # 1. 计算距离 (使用 cdist 更省内存)
-        # 即使这里产生了 N*N，但在 TopK 后会被释放，不会像 H 那样一直存着
+        # 1. Calculate distance (using cdist saves memory)
+        # Even if N*N is generated here, it will be released after TopK, unlike H which will be stored indefinitely.
         dist_mat = torch.cdist(x, x, p=2) 
         
         # 2. Top-K
         # indices: [N, k+1]
         _, indices = torch.topk(dist_mat, k=self.k + 1, dim=1, largest=False)
         
-        # 3. 构建稀疏索引 (Sparse Indices)
-        # 行: 节点 ID (被包含的节点)
-        # 列: 超边 ID (中心节点)
+        # 3. Constructing Sparse Indices
+        # Line: Node ID (the included node)
+        # Column: Hyperedge ID (Center Node)
         row_idx = indices.reshape(-1) # [N * (k+1)]
         col_idx = torch.arange(N, device=device).unsqueeze(1).expand(N, self.k + 1).reshape(-1)
         
         indices_tensor = torch.stack([row_idx, col_idx], dim=0)
         values_tensor = torch.ones(indices_tensor.size(1), device=device, dtype=torch.float32)
         
-        # 创建稀疏张量
+        # Creating sparse tensors
         H_sparse = torch.sparse_coo_tensor(indices_tensor, values_tensor, size=(N, N))
         
         return H_sparse
 
 
 # ============================
-# [模块二] 超图卷积层 (Sparse Optimized)
+# [Module 2] Hypergraph Convolutional Layer (Sparse Optimized)
 # ============================
 class HypergraphConvLayer(nn.Module):
     """
-    支持稀疏矩阵输入的 HGNN。
+    HGNN that supports sparse matrix input.
     """
     def __init__(self, in_channels: int, out_channels: int, bias: bool = True):
         super().__init__()
@@ -128,22 +128,22 @@ class HypergraphConvLayer(nn.Module):
         N = x.size(0)
         device = x.device
         
-        # H 是稀疏的，我们不能直接 sum(dim=1) 得到 dense degree
-        # 需要手动计算度
+        # H is sparse, so we cannot directly obtain the dense degree by sum(dim=1).
+        # Degree needs to be calculated manually
         # H indices: [2, E_total] where row=node, col=hyperedge
         H_indices = H_sparse._indices()
         
-        # 1. 计算节点度 Dv
+        # 1. Calculate the node degree Dv
         # Dv[i] = sum of H[i, :]
         Dv = torch.zeros(N, device=device, dtype=x.dtype)
         Dv.index_add_(0, H_indices[0], torch.ones(H_indices.shape[1], device=device))
         Dv = Dv.clamp(min=1e-6)
         Dv_inv_sqrt = torch.pow(Dv, -0.5).view(-1, 1)
 
-        # 2. 计算超边度 De
+        # 2. Calculate the hypermargin De.
         # De[j] = sum of H[:, j]
-        # 因为我们是 k-NN 建图，每个超边固定连接 k+1 个节点
-        # 所以 De 其实是常数 k+1，但为了通用性还是算一下
+        # Because we are using k-NN to construct the graph, each hyperedge connects k+1 nodes.
+        # Therefore, De is actually a constant k+1, but for the sake of generality, let's calculate it again.
         De = torch.zeros(N, device=device, dtype=x.dtype)
         De.index_add_(0, H_indices[1], torch.ones(H_indices.shape[1], device=device))
         De = De.clamp(min=1e-6)
@@ -154,8 +154,8 @@ class HypergraphConvLayer(nn.Module):
         x_norm = x * Dv_inv_sqrt
         
         # -> H^T (Dv^-0.5 X)
-        # 稀疏矩阵乘法: (N, N)^T @ (N, F) = (N, N) @ (N, F) -> (N, F)
-        # torch.sparse.mm 支持 (Sparse, Dense) -> Dense
+        # Sparse matrix multiplication: (N, N)^T @ (N, F) = (N, N) @ (N, F) -> (N, F)
+        # torch.sparse.mm supports (Sparse, Dense) -> Dense
         x_e = torch.sparse.mm(H_sparse.t(), x_norm)
         
         # -> De^-1 (...)
@@ -173,7 +173,7 @@ class HypergraphConvLayer(nn.Module):
 
 
 # ============================
-# 时间聚合 & 门控 (通用)
+# Time aggregation & gating (general)
 # ============================
 class TemporalEncoder(nn.Module):
     def __init__(self, in_channels: int, hidden_channels: int, num_layers: int = 1):

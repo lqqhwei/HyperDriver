@@ -1,10 +1,8 @@
 # baselines_centrality.py
 """
-Step 5: 计算基准中心性 (DC, BC, EC)
-
-[Bold Upgrade]: 
-仅负责计算并保存基准分数，移除所有旧的"覆盖率对比"逻辑。
-真正的"能量大乱斗"评测将统一在 eval_driver.py 中进行。
+Step 5: Calculate baseline centrality (DC, BC, EC)
+[Bold Upgrade]: Only responsible for calculating and saving baseline scores, removing all old "coverage comparison" logic.
+The true "energy battle royale" evaluation will be unified in eval_driver.py.
 """
 
 import argparse
@@ -18,7 +16,7 @@ from src.data_utils import load_datasets_config
 
 
 # ============================
-# 中心性算法 (Standard)
+# Centrality Algorithm (Standard)
 # ============================
 
 def compute_degree_centrality(N: int, edges_u: np.ndarray, edges_v: np.ndarray,
@@ -110,7 +108,7 @@ def compute_betweenness_centrality_unweighted(
     return BC
 
 # ============================
-# 处理流程
+# Processing flow
 # ============================
 
 def process_one_dataset(root_dir: str, dataset_name: str):
@@ -128,7 +126,7 @@ def process_one_dataset(root_dir: str, dataset_name: str):
     static_df = pd.read_csv(static_edges_path)
     N = len(nodes_df)
     
-    # 构造图
+    # Construction diagram
     u = static_df["src_idx"].to_numpy(dtype=np.int64)
     v = static_df["dst_idx"].to_numpy(dtype=np.int64)
     w = static_df["weight"].to_numpy(dtype=np.float64)
@@ -142,20 +140,20 @@ def process_one_dataset(root_dir: str, dataset_name: str):
     v_final = edges_df["v"].to_numpy(dtype=np.int64)
     w_final = edges_df["weight"].to_numpy(dtype=np.float64)
 
-    # 计算分数
+    # Calculate fractions
     print(f"[INFO] Computing Degree, Eigenvector, Betweenness for N={N}...")
     dc = compute_degree_centrality(N, u_final, v_final, w_final)
     ec = compute_eigenvector_centrality(N, u_final, v_final, w_final)
     bc = compute_betweenness_centrality_unweighted(N, u_final, v_final)
 
-    # 保存
+    # save
     base_dir = os.path.join(root_dir, "results", dataset_name, "baselines")
     os.makedirs(base_dir, exist_ok=True)
 
-    # 保存时带上 protein ID 方便后续合并
+    # Include the protein ID when storing for easier merging later.
     base_df = nodes_df[["index", "protein"]].copy()
     
-    # 分别保存，互不干扰
+    # Save them separately so they don't interfere with each other.
     pd.concat([base_df, pd.DataFrame({"dc": dc})], axis=1).to_csv(os.path.join(base_dir, "dc_scores.csv"), index=False)
     pd.concat([base_df, pd.DataFrame({"ec": ec})], axis=1).to_csv(os.path.join(base_dir, "ec_scores.csv"), index=False)
     pd.concat([base_df, pd.DataFrame({"bc": bc})], axis=1).to_csv(os.path.join(base_dir, "bc_scores.csv"), index=False)

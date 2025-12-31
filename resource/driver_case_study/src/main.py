@@ -2,16 +2,16 @@
 """
 HyperDriver Case Study Candidate Selector (Tie-break Upgrade)
 
-核心思想不变：放弃"硬阈值交集"，采用"分层择优"，保证每个数据集都能产出三类 Case 的候选池：
-1. Hidden Driver: 在 Low-Degree 群体中选 DriverScore 最高的（并列时更偏向更低 Degree、非必需）。
-2. True Leader:  在 High-Degree 群体中选 DriverScore 最高的（并列时更偏向更高 Degree、非必需）。
-3. Inefficient Hub: 在 High-Degree 群体中选 DriverScore 最低的（并列时更偏向更高 Degree、更低 EnergyEff、非必需）。
+The core idea remains unchanged: abandoning the "hard threshold intersection" approach, a "stratified selection" method is adopted to ensure that each dataset produces candidate pools for three types of cases:
+1. Hidden Driver: Select the driver with the highest DriverScore from the Low-Degree group (in case of a tie, favoring lower degrees; not mandatory).
+2. True Leader: Select the driver with the highest DriverScore from the High-Degree group (in case of a tie, favoring higher degrees; not mandatory).
+3. Inefficient Hub: Select the hub with the lowest DriverScore from the High-Degree group (in case of a tie, favoring higher degrees and lower EnergyEff; not mandatory).
 
-本版仅做两类升级（整体结构与输出文件保持不变）：
-- 阈值更贴合定义：Low-Degree 默认用 bottom 30%（不足时回退到 median）；Hub 仍用 top 10%，不足时逐步放宽。
-- 排序加入 tie-break：避免 DriverScore 并列（尤其 0 值）导致挑不到"最极端反差"的代表节点。
+This version only upgrades two categories (the overall structure and output files remain unchanged):
+- Thresholds are more closely aligned with the definition: Low-Degree uses the bottom 30% by default (falling back to the median if insufficient); Hub still uses the top 10%, gradually widening if insufficient.
+- Added tie-break to sorting: This prevents DriverScore ties (especially 0 values) from failing to select the representative node with the "most extreme contrast".
 
-输出：
+Output:
 - output/candidates.csv
 - output/driver_results.csv
 """
@@ -26,8 +26,8 @@ from pathlib import Path
 
 def load_datasets_config(conf_path: str) -> List[str]:
     """
-    从 conf/datasets.json 读取启用的数据集列表。
-    只返回 enabled == true 的 name。:contentReference[oaicite:8]{index=8}
+    Read the list of enabled datasets from conf/datasets.json.
+    Returns only the name where enabled == true. :contentReference[oaicite:8]{index=8}
     """
     with open(conf_path, "r", encoding="utf-8") as f:
         cfg = json.load(f)
@@ -58,37 +58,37 @@ def find_candidates_for_dataset(root_dir, dataset_name):
 
     df = pd.read_csv(scores_path)
 
-    # 确保列存在
+    # Ensure the column exists
     required_cols = ["protein", "driver_score", "score_S", "score_AC"]
     if not all(col in df.columns for col in required_cols):
         return []
 
     df = _prefer_nonessential_first(df)
 
-    # 过滤掉孤立点 (Degree=0)，避免无意义的分析
+    # Filter out outliers (Degree=0) to avoid meaningless analysis.
     df = df[df["score_S"] > 0].copy()
     if df.empty:
         return []
 
-    # 1) 定义群体阈值
-    # Low-degree: bottom 30%（不足 3 个则回退到 median）
+    # 1) Define group threshold
+    # Low-degree: bottom 30% (if less than 3, it will fall back to the median).
     s_low30 = get_percentile_threshold(df["score_S"], 30)
     s_median = get_percentile_threshold(df["score_S"], 50)
 
-    # High-degree: top 10%（不足时逐步放宽到 top20/top30/top40）
+    # High-degree: Top 10% (if this is not met, the requirement will be gradually relaxed to Top 20/Top 30/Top 40)
     hub_percentiles = [90, 80, 70, 60]
 
     candidates = []
 
     # ---------------------------------------------------------
-    # Case 1: Hidden Driver (高 DriverScore + 低 Degree)
+    # Case 1: Hidden Driver (High DriverScore + Low Degree)
     # ---------------------------------------------------------
     pool_non_hub = df[df["score_S"] <= s_low30].copy()
     if len(pool_non_hub) < 3:
         pool_non_hub = df[df["score_S"] <= s_median].copy()
 
     if not pool_non_hub.empty:
-        # 排序：DriverScore ↓，Degree ↑(更小优先)，Essential ↑(0 优先)
+        # Sorting: DriverScore ↓, Degree ↑ (lower priority), Essential ↑ (0 priority)
         top_hidden = pool_non_hub.sort_values(
             by=["driver_score", "score_S", "essential"],
             ascending=[False, True, True],
@@ -109,7 +109,7 @@ def find_candidates_for_dataset(root_dir, dataset_name):
             )
 
     # ---------------------------------------------------------
-    # Case 2 & 3: 在 Hub 池中择优（True Leader / Inefficient Hub）
+    # Cases 2 & 3: Selecting the best leader from the hub pool (True Leader / Inefficient Hub)
     # ---------------------------------------------------------
     pool_hub = pd.DataFrame(columns=df.columns)
     for p in hub_percentiles:
@@ -118,15 +118,15 @@ def find_candidates_for_dataset(root_dir, dataset_name):
         if len(pool_hub) >= 3:
             break
 
-    # 若仍不足 3，至少保证非空（极小数据集兜底）
+    # If the result is still less than 3, at least ensure that it is not empty (for very small datasets as a safety net).
     if pool_hub.empty:
         thr = get_percentile_threshold(df["score_S"], 50)
         pool_hub = df[df["score_S"] >= thr].copy()
 
     if not pool_hub.empty:
         # ---------------------------------------------------------
-        # Case 2: True Leader (高 DriverScore + 高 Degree)
-        # 排序：DriverScore ↓，Degree ↓(更大优先)，Essential ↑(0 优先)
+        # Case 2: True Leader (High DriverScore + High Degree)
+        # Sorting: DriverScore ↓, Degree ↓ (higher priority), Essential ↑ (0 priority)
         # ---------------------------------------------------------
         top_leader = pool_hub.sort_values(
             by=["driver_score", "score_S", "essential"],
@@ -148,8 +148,8 @@ def find_candidates_for_dataset(root_dir, dataset_name):
             )
 
         # ---------------------------------------------------------
-        # Case 3: Inefficient Hub (低 DriverScore + 高 Degree)
-        # 排序：DriverScore ↑(更低优先)，Degree ↓(更大优先)，EnergyEff ↑(更低优先)，Essential ↑(0 优先)
+        # Case 3: Inefficient Hub (low DriverScore + high Degree)
+        # Sorting: DriverScore ↑ (lower priority), Degree ↓ (higher priority), EnergyEff ↑ (lower priority), Essential ↑ (0 priority)
         # ---------------------------------------------------------
         bad_hub = pool_hub.sort_values(
             by=["driver_score", "score_S", "score_AC", "essential"],
@@ -175,12 +175,12 @@ def find_candidates_for_dataset(root_dir, dataset_name):
 
 def select_best_representatives(all_candidates_df):
     """
-    从全网候选者中，选出 3 个最终代表 (The Chosen Ones)
-    仅更新排序/tie-break 逻辑，输出结构保持不变。
+    Three final representatives were selected from all online candidates (The Chosen Ones).
+    Only the sorting/tie-break logic is updated; the output structure remains unchanged.
     """
     best_picks = []
 
-    # 1) Best Hidden Driver: DriverScore ↓, Degree ↑(更小), Essential ↑(0)
+    # 1) Best Hidden Driver: DriverScore ↓, Degree ↑(smaller), Essential ↑(0)
     c1 = all_candidates_df[all_candidates_df["Case"] == "1_Hidden_Driver"]
     if not c1.empty:
         best_c1 = c1.sort_values(
@@ -192,7 +192,7 @@ def select_best_representatives(all_candidates_df):
     else:
         best_picks.append(pd.Series({"Case": "1_Hidden_Driver", "Protein": "None"}))
 
-    # 2) Best True Leader: DriverScore ↓, Degree ↓(更大), Essential ↑(0)
+    # 2) Best True Leader: DriverScore ↓, Degree ↓(greater), Essential ↑(0)
     c2 = all_candidates_df[all_candidates_df["Case"] == "2_True_Leader"]
     if not c2.empty:
         best_c2 = c2.sort_values(
@@ -202,7 +202,7 @@ def select_best_representatives(all_candidates_df):
         ).iloc[0]
         best_picks.append(best_c2)
 
-    # 3) Best Inefficient Hub: DriverScore ↑(更低), Degree ↓(更大), EnergyEff ↑(更低), Essential ↑(0)
+    # 3) Best Inefficient Hub: DriverScore ↑ (Lower), Degree ↓ (Higher), EnergyEff ↑ (Lower), Essential ↑ (0)
     c3 = all_candidates_df[all_candidates_df["Case"] == "3_Inefficient_Hub"]
     if not c3.empty:
         best_c3 = c3.sort_values(
@@ -244,20 +244,20 @@ def main():
 
     res_df = pd.DataFrame(all_candidates)
 
-    # 1) 保存候选池
+    # 1) Save candidate pool
     os.makedirs(os.path.join(root_dir, "resource/driver_case_study/output"), exist_ok=True)
     out_path = os.path.join(root_dir, "resource/driver_case_study/output", "candidates.csv")
     res_df.to_csv(out_path, index=False)
     print(f"[INFO] Full candidates saved to: {out_path}")
 
-    # 2) 决出 Top 3
+    # 2) Top 3 determined
     print("\n========== The Final Three ==========")
     best_df = select_best_representatives(res_df)
 
     best_out_path = os.path.join(root_dir, "resource/driver_case_study/output", "driver_results.csv")
     best_df.to_csv(best_out_path, index=False)
 
-    # 打印到控制台
+    # Print to console
     print(best_df.to_string(index=False))
     print(f"\n[SUCCESS] Final representatives saved to: {best_out_path}")
 

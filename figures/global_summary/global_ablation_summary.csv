@@ -1,0 +1,49 @@
+Dataset,Strategy,Avg_Log10_Energy
+Hazbun,HyperDriver,3.2044672929788285
+Hazbun,w/o Dynamics,4.818183152220605
+Hazbun,w/o Greedy,4.422567605063984
+Hazbun,w/o Hypergraph,8.041947848380808
+Babu,HyperDriver,4.5005312667303
+Babu,w/o Dynamics,5.536738321369462
+Babu,w/o Greedy,6.471320135461195
+Babu,w/o Hypergraph,3.8719159468601583
+Breitkreutz,HyperDriver,3.862349948036218
+Breitkreutz,w/o Dynamics,5.800088163070566
+Breitkreutz,w/o Greedy,6.82174795980328
+Breitkreutz,w/o Hypergraph,3.7888740557937535
+Gavin,HyperDriver,4.270575968499431
+Gavin,w/o Dynamics,6.0948433360104834
+Gavin,w/o Greedy,7.591134988416498
+Gavin,w/o Hypergraph,4.200785305938632
+Ho,HyperDriver,4.036192979583085
+Ho,w/o Dynamics,5.652504729667782
+Ho,w/o Greedy,6.410013067380688
+Ho,w/o Hypergraph,3.726353556277733
+Ito,HyperDriver,4.233705149533152
+Ito,w/o Dynamics,4.643660699691218
+Ito,w/o Greedy,4.571360479053929
+Ito,w/o Hypergraph,5.098652397470778
+Krogan_LCMS,HyperDriver,4.271474510713751
+Krogan_LCMS,w/o Dynamics,5.885650154709342
+Krogan_LCMS,w/o Greedy,7.611491380358945
+Krogan_LCMS,w/o Hypergraph,4.366349006976911
+Krogan_MALDI,HyperDriver,4.261790068262446
+Krogan_MALDI,w/o Dynamics,5.805699231363931
+Krogan_MALDI,w/o Greedy,7.351404389455564
+Krogan_MALDI,w/o Hypergraph,4.428654761530772
+Lambert,HyperDriver,3.7464086910330194
+Lambert,w/o Dynamics,4.458230815041741
+Lambert,w/o Greedy,4.850290097486692
+Lambert,w/o Hypergraph,3.461026243311539
+Tarassov,HyperDriver,3.760809453364015
+Tarassov,w/o Dynamics,4.433949528525834
+Tarassov,w/o Greedy,3.974178017404496
+Tarassov,w/o Hypergraph,5.123525371748908
+Uetz,HyperDriver,3.7278391912893434
+Uetz,w/o Dynamics,4.121753120535584
+Uetz,w/o Greedy,3.911248834854117
+Uetz,w/o Hypergraph,8.664577490931958
+Yu,HyperDriver,3.8248183504085973
+Yu,w/o Dynamics,4.299023326466745
+Yu,w/o Greedy,4.144161592235765
+Yu,w/o Hypergraph,6.312490885938613

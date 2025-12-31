@@ -2,22 +2,22 @@
 # -*- coding: utf-8 -*-
 
 """
-从 OGEE v3 下载的 Saccharomyces cerevisiae W303_genes.csv
-和 SGD 的 SGD_features.tab 中，生成 OGEE_essential_orfs.txt
+From the Saccharomyces cerevisiae W303_genes.csv file downloaded from OGEE v3
+and the SGD_features.tab file from SGD, generate OGEE_essential_orfs.txt
 
-输入文件（放在同一目录，或自己改路径）:
+Input files (place in the same directory, or change the path):
 - Saccharomyces cerevisiae W303_genes.csv
 - SGD_features.tab
 
-输出文件:
-- OGEE_essential_orfs.txt  # 每行一个 ORF，例如 YGR129W
+Output file:
+- OGEE_essential_orfs.txt # One ORF per line, e.g., YGR129W
 """
 
 from pathlib import Path
 import pandas as pd
 
 
-# ===== 路径设置（按需修改） =====
+# ===== Path settings (modify as needed) =====
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "output"
@@ -30,21 +30,21 @@ OUT_OGEE_ORFS = OUTPUT_DIR / "OGEE_essential_orfs.txt"
 
 def build_sgdid_to_orf_map(features_path: Path) -> dict:
     """
-    从 SGD_features.tab 构建:
+    Build from SGD_features.tab:
         SGDID (S000000001) -> ORF (YAL001C)
-    只使用 feature_type == 'ORF' 的行
+    Only use lines where feature_type == 'ORF'
     """
     if not features_path.exists():
-        raise FileNotFoundError(f"找不到 SGD_features.tab: {features_path}")
+        raise FileNotFoundError(f"SGD_features.tab not found: {features_path}")
 
-    print(f"[INFO] 读取 SGD_features.tab: {features_path}")
-    # 文件是 tab 分隔、无表头
+    print(f"[INFO] Read SGD_features.tab: {features_path}")
+    # The file is tab-separated and has no header.
     df = pd.read_csv(features_path, sep="\t", header=None, dtype=str)
 
-    # 按 SGD 官方说明:
+    # According to the official SGD statement:
     #  0: SGDID
     #  1: feature_type
-    #  3: feature_name (systematic name, 例如 YGR129W)
+    #  3: feature_name (systematic name, For example, YGR129W)
     df_orf = df[df[1] == "ORF"].copy()
 
     sgdid_to_orf = (
@@ -55,36 +55,36 @@ def build_sgdid_to_orf_map(features_path: Path) -> dict:
         .to_dict()
     )
 
-    print(f"[INFO] 映射表构建完成, ORF 条目数: {len(sgdid_to_orf)}")
+    print(f"[INFO] Mapping table construction complete, ORF entry count: {len(sgdid_to_orf)}")
     return sgdid_to_orf
 
 
 def main():
-    # 1. 构建 SGDID -> ORF 映射
+    # 1. Construct SGDID -> ORF mapping
     sgd_map = build_sgdid_to_orf_map(SGD_FEATURES_PATH)
 
-    # 2. 读取 OGEE W303 CSV
+    # 2. Read OGEE W303 CSV
     if not OGEE_CSV_PATH.exists():
-        raise FileNotFoundError(f"找不到 OGEE 基因文件: {OGEE_CSV_PATH}")
+        raise FileNotFoundError(f"OGEE gene file not found: {OGEE_CSV_PATH}")
 
-    print(f"[INFO] 读取 OGEE W303 基因文件: {OGEE_CSV_PATH}")
+    print(f"[INFO] Reading the OGEE W303 gene file: {OGEE_CSV_PATH}")
     df = pd.read_csv(OGEE_CSV_PATH, dtype=str)
 
-    # 看一下列名（调试用）
-    print("[INFO] OGEE 列名:", list(df.columns))
+    # Take a look at the column names (for debugging purposes).
+    print("[INFO] OGEE column names:", list(df.columns))
 
-    # 典型列：
+    # Typical columns:
     # ['dataset', 'taxaID', 'locus', 'gene', 'essentiality', 'pmid', 'Ref_db']
-    # essentiality 列里常见值：'E' (essential), 'NE' (non-essential), 'C' (conditional) 等
+    # Common values ​​for the essentiality column include: 'E' (essential), 'NE' (non-essential), 'C' (conditional), etc.
 
-    # 3. 只保留 essentiality 标记为 essential 的基因
+    # 3. Only genes marked as essentiality are retained.
     ess = df["essentiality"].fillna("").str.upper()
-    mask_essential = ess.isin(["E", "ESSENTIAL", "ES"])  # 视具体文件而定，这里兼容几种写法
+    mask_essential = ess.isin(["E", "ESSENTIAL", "ES"])  # Depending on the specific document, several writing styles are supported here.
 
     df_ess = df[mask_essential].copy()
-    print(f"[INFO] OGEE 中 essential 基因行数: {len(df_ess)}")
+    print(f"[INFO] Number of essential gene rows in OGEE: {len(df_ess)}")
 
-    # 4. 用 locus (S000000001) 映射到 ORF
+    # 4. Map locus(S000000001) to ORF
     loci = df_ess["locus"].fillna("")
 
     orfs = []
@@ -97,11 +97,11 @@ def main():
         else:
             missing.append(sgdid)
 
-    print(f"[INFO] 成功映射到 ORF 的数量: {len(orfs)}")
+    print(f"[INFO] Number of successfully mapped to ORF: {len(orfs)}")
     if missing:
-        print(f"[WARN] 有 {len(missing)} 个 SGDID 在 SGD_features.tab 中找不到 ORF，示例: {missing[:5]}")
+        print(f"[WARN] There are {len(missing)} SGDIDs whose ORFs cannot be found in SGD_features.tab. Example: {missing[:5]}")
 
-    # 5. 去重、排序并保存为一列文本
+    # 5. Remove duplicates, sort, and save as a column of text.
     ser_orf = (
         pd.Series(orfs, name="ORF")
         .dropna()
@@ -110,8 +110,8 @@ def main():
     )
 
     ser_orf.to_csv(OUT_OGEE_ORFS, index=False, header=False, encoding="utf-8")
-    print(f"[DONE] 已生成 OGEE_essential_orfs.txt: {OUT_OGEE_ORFS}")
-    print(f"[INFO] 最终 ORF 数量: {len(ser_orf)}")
+    print(f"[DONE] OGEE_essential_orfs.txt has been generated: {OUT_OGEE_ORFS}")
+    print(f"[INFO] Final ORF count: {len(ser_orf)}")
 
 
 if __name__ == "__main__":

@@ -1,5 +1,5 @@
 {
-  "description": "HyperDriver 实验数据集控制配置",
+  "description": "HyperDriver Experimental dataset control configuration",
   "datasets": [
     { "name": "Hazbun",        "enabled": true },
     { "name": "Babu",          "enabled": true },

@@ -4,75 +4,75 @@ from scipy import linalg
 class ControlEnergyCalculator:
     def __init__(self, adj_matrix):
         """
-        初始化能量计算器
-        adj_matrix: 子图的邻接矩阵 (NxN numpy array)
+        Initialize the energy calculator
+        adj_matrix: The adjacency matrix of the subgraph (NxN NumPy array)
         """
         self.A_adj = adj_matrix
         self.num_nodes = adj_matrix.shape[0]
         
-        # 1. 构建系统矩阵 A_sys
-        # 动力学方程: dx/dt = -L x (一致性协议/扩散过程)
+        # 1. Construct the system matrix A_sys
+        # Kinetic equation: dx/dt = -L x (Consensus protocol/diffusion process)
         # L = D - A
         degrees = np.sum(adj_matrix, axis=1)
         self.L = np.diag(degrees) - adj_matrix
         
-        # 2. 稳定性处理 (Stability Perturbation)
-        # 为了保证 Lyapunov 方程有唯一解，矩阵 A 必须是 Hurwitz 稳定的 (特征值实部 < 0)。
-        # 原始 -L 的特征值 <= 0，且包含 0。
-        # 我们引入一个微小的衰减率 epsilon (模拟生物降解)，使系统渐进稳定。
-        self.epsilon = 0.5  # 对于 PPI 网络，0.1~1.0 都是合理的衰减系数
+        # 2. Stability Perturbation
+        # To ensure that the Lyapunov equation has a unique solution, matrix A must be Hurwitz stable (real eigenvalues ​​< 0).
+        # The eigenvalues ​​of the original -L are <= 0 and include 0.
+        # We introduce a small decay rate, epsilon (simulating biodegradation), to gradually stabilize the system.
+        self.epsilon = 0.5  # For PPI networks, a decay factor of 0.1 to 1.0 is reasonable.
         self.A_sys = -self.L - self.epsilon * np.eye(self.num_nodes)
 
     def compute_energy(self, driver_indices):
         """
-        计算给定驱动节点集合的"平均控制能量"。
-        driver_indices: list of int, 选中的驱动节点索引
+        Calculate the "average control energy" for a given set of driving nodes.
+        driver_indices: list of int, the index of the selected driver node.
         
         Returns:
-            energy_score: float (数值越小越好)
+            energy_score: float (smaller values ​​are better)
         """
         k = len(driver_indices)
         if k == 0:
             return float('inf')
 
-        # 1. 构建输入矩阵 B (NxK)
-        # 只有在 driver_indices 对应的行是 1，其余是 0
+        # 1. Construct the input matrix B (NxK)
+        # Only the row corresponding to driver_indices is 1, the rest are 0.
         B = np.zeros((self.num_nodes, k))
         for col_idx, node_idx in enumerate(driver_indices):
             B[node_idx, col_idx] = 1.0
 
-        # 2. 求解连续 Lyapunov 方程 (Continuous Lyapunov Equation)
+        # 2. Solve the continuous Lyapunov equation.
         # A X + X A^T = Q
-        # 对应我们的形式: A_sys Wc + Wc A_sys^T + B B^T = 0
-        # 所以 Q = -B B^T
+        # Corresponding to our format: A_sys Wc + Wc A_sys^T + B B^T = 0
+        # Therefore, Q = -B B^T
         Q = -np.dot(B, B.T)
         
         try:
-            # scipy.linalg.solve_continuous_lyapunov(a, q) 求解 AX + XA^H = Q
+            # scipy.linalg.solve_continuous_lyapunov(a, q) solves AX + XA^H = Q
             Wc = linalg.solve_continuous_lyapunov(self.A_sys, Q)
         except Exception as e:
             print(f"Lyapunov Solver failed: {e}")
             return float('inf')
 
-        # 3. 计算能量指标
-        # 理论: Minimum Energy ~ Trace(Inv(Wc))
-        # Gramian Wc 的特征值度量了系统在各个方向上的可控性。
-        # 特征值越大 -> 可控性越好 -> 需要的能量越少。
-        # 能量 E 与 Wc 的特征值成反比。
+        # 3. Calculate energy index
+        # Theory: Minimum Energy ~ Trace(Inv(Wc))
+        # The eigenvalues ​​of Gramian Wc measure the controllability of a system in all directions.
+        # Larger eigenvalues ​​mean better controllability and less energy required.
+        # The energy E is inversely proportional to the eigenvalue of Wc.
         
         try:
-            # 计算 Wc 的特征值
+            # Calculate the eigenvalues ​​of Wc
             evals = linalg.eigvalsh(Wc)
             
-            # 过滤极小的特征值以避免除以零 (数值截断)
-            # 实际计算中 Wc 应该是正定的，但浮点误差可能产生微小负数或0
+            # Filter out extremely small eigenvalues ​​to avoid division by zero (numerical truncation).
+            # In actual calculations, Wc should be positive definite, but floating-point errors may produce tiny negative numbers or zeros.
             min_tol = 1e-12
             evals = evals[evals > min_tol]
             
             if len(evals) == 0:
                 return float('inf')
             
-            # 指标: Average Energy = Trace(Wc^-1) = Sum(1/lambda_i)
+            # Metrics: Average Energy = Trace(Wc^-1) = Sum(1/lambda_i)
             energy = np.sum(1.0 / evals)
             
             return energy
@@ -80,21 +80,21 @@ class ControlEnergyCalculator:
         except np.linalg.LinAlgError:
             return float('inf')
 
-# 测试代码
+# Test code
 if __name__ == "__main__":
-    # 创建一个小测试图
+    # Create a small test graph
     import networkx as nx
     G_test = nx.path_graph(10)
     A_test = nx.to_numpy_array(G_test)
     
     calculator = ControlEnergyCalculator(A_test)
     
-    # 比较两种驱动方案
-    # 方案 A: 选端点 (通常较难控制全图)
+    # Comparison of two driving schemes
+    # Option A: Select endpoints (usually more difficult to control the entire map)
     drivers_A = [0] 
     energy_A = calculator.compute_energy(drivers_A)
     
-    # 方案 B: 选中心点 (通常容易控制)
+    # Option B: Select a center point (usually easier to control)
     drivers_B = [4]
     energy_B = calculator.compute_energy(drivers_B)
     
@@ -102,6 +102,6 @@ if __name__ == "__main__":
     print(f"Energy (Center Node): {energy_B:.4e}")
     
     if energy_B < energy_A:
-        print("✅ 测试通过: 中心节点控制能量更低。")
+        print("Test passed: The central node controls lower energy consumption.")
     else:
-        print("❌ 测试失败: 结果不符合直觉。")
+        print("Test failed: The result is not intuitive.")

@@ -20,7 +20,7 @@ from .layers import (
 @dataclass
 class HyperDriverConfig:
     """
-    HyperDriver 模型配置 (V4.2 Optimized: Sparse + Residual)
+    HyperDriver Model Configuration (V4.2 Optimized: Sparse + Residual)
     """
     in_feats: int                  
     hidden_dim: int = 64           
@@ -28,15 +28,15 @@ class HyperDriverConfig:
     num_hyper_layers: int = 1      
     num_time_layers: int = 1       
     num_classes: int = 1           
-    # [优化] 只保留精细尺度，减少计算量和显存
+    # [Optimization] Only retain fine-scale values ​​to reduce computational load and GPU memory usage.
     num_scales: List[int] = field(default_factory=lambda: [5, 10, 15]) 
-    # [优化] 提高 Dropout
+    # [Optimization] Improve Dropout
     dropout: float = 0.5
 
 
 class HyperDriver(nn.Module):
     """
-    HyperDriver V4.2 主模型
+    HyperDriver V4.2 Main model
     """
 
     def __init__(self, config: HyperDriverConfig):
@@ -44,10 +44,10 @@ class HyperDriver(nn.Module):
         self.config = config
         H = config.hidden_dim
 
-        # -------- 特征投影 --------
+        # -------- Feature projection --------
         self.input_proj = nn.Linear(config.in_feats, H)
 
-        # -------- 模块一：动态图学习 (Student) --------
+        # -------- Module 1: Learning with Animated Graphs (Student) --------
         self.edge_predictor = EdgePredictor(in_channels=H, hidden_dim=H // 2)
 
         self.graph_convs = nn.ModuleList()
@@ -56,7 +56,7 @@ class HyperDriver(nn.Module):
 
         self.graph_temporal_encoder = TemporalEncoder(H, H, config.num_time_layers)
 
-        # -------- 模块二：多尺度动态超图 (Sparse) --------
+        # -------- Module 2: Multi-scale Dynamic Hypergraph (Sparse) --------
         self.hyper_builders = nn.ModuleList()
         self.hyper_convs_per_scale = nn.ModuleList()
 
@@ -69,11 +69,11 @@ class HyperDriver(nn.Module):
 
         self.hyper_temporal_encoder = TemporalEncoder(H, H, config.num_time_layers)
 
-        # -------- 模块三：门控与分类 (Residual) --------
+        # -------- Module 3: Gating and Classification (Residual) --------
         self.gating = NodeGatingLayer(in_channels=H)
-        self.hyper_residual_proj = nn.Linear(H, H) # 用于残差对齐
+        self.hyper_residual_proj = nn.Linear(H, H) # Used for residual alignment
 
-        # 这里的 alpha 作为一个可学习参数，控制 residual 的初始比例
+        # Here, alpha is a learnable parameter that controls the initial proportion of the residual.
         self.alpha = nn.Parameter(torch.tensor(0.0))
 
         self.classifier = nn.Sequential(
@@ -90,24 +90,24 @@ class HyperDriver(nn.Module):
         static_edge_index: torch.Tensor,
     ) -> Dict[str, Any]:
         """
-        标准的训练前向传播
+        Standard training forward propagation
         """
         T, N, F_in = x_seq.shape
         device = x_seq.device
         static_edge_index = static_edge_index.to(device)
 
-        # 1. 特征投影
+        # 1. Feature projection
         x_emb = self.input_proj(x_seq)
 
         graph_feats_list = []
         hyper_feats_list = []
         predicted_weights_list = []
 
-        # 2. 按时间步循环
+        # 2. Loop by time step
         for t in range(T):
             x_t = x_emb[t]
 
-            # ========== 模块一：动态图分支 ==========
+            # ========== Module 1: Dynamic Graph Branches ==========
             w_pred = self.edge_predictor(x_t, static_edge_index)
             predicted_weights_list.append(w_pred)
 
@@ -118,11 +118,11 @@ class HyperDriver(nn.Module):
                 h_graph = self.dropout(h_graph)
             graph_feats_list.append(h_graph)
 
-            # ========== 模块二：动态超图分支 (Sparse) ==========
+            # ========== Module 2: Dynamic Hypergraph Branches (Sparse) ==========
             if len(self.config.num_scales) > 0:
                 scale_outputs = []
                 for idx, k in enumerate(self.config.num_scales):
-                    # Builder 返回的是稀疏张量 H_sparse
+                    # Builder The returned value is a sparse tensor. H_sparse
                     builder = self.hyper_builders[idx]
                     H_sparse = builder(x_t)
 
@@ -139,7 +139,7 @@ class HyperDriver(nn.Module):
                 h_hyper_t = torch.zeros_like(x_t)
             hyper_feats_list.append(h_hyper_t)
 
-        # 3. 时序聚合
+        # 3. Time-series aggregation
         # [T, N, H] -> [N, T, H]
         graph_seq_tensor = torch.stack(graph_feats_list, dim=0).permute(1, 0, 2)
         z_graph = self.graph_temporal_encoder(graph_seq_tensor)
@@ -147,15 +147,15 @@ class HyperDriver(nn.Module):
         hyper_seq_tensor = torch.stack(hyper_feats_list, dim=0).permute(1, 0, 2)
         z_hyper = self.hyper_temporal_encoder(hyper_seq_tensor)
 
-        # 4. 模块三：残差融合
-        # g 在这里用于 gating mask 的生成 (N, 1)
+        # 4. Module 3: Residual Fusion
+        # g is used here to generate the gating mask (N, 1).
         g, _ = self.gating(z_graph, z_hyper) 
         
         z_hyper_proj = self.hyper_residual_proj(z_hyper)
-        # 显式使用 sigmoid(alpha) 控制混合比例，确保训练初期稳定
+        # Explicitly using sigmoid(alpha) to control the blending ratio ensures stability during the initial training phase.
         z_mix = z_graph + torch.sigmoid(self.alpha) * 0.1 * z_hyper_proj
 
-        # 5. 分类头
+        # 5. Classification Head
         logits = self.classifier(z_mix)
 
         return {
@@ -174,34 +174,33 @@ class HyperDriver(nn.Module):
         static_edge_index: torch.Tensor,
     ) -> Tuple[torch.Tensor, torch.Tensor, torch.Tensor]:
         """
-        [NEW] 获取用于 Average Energy Controllability 分析的"时间平均混合结构"。
+        [NEW] Retrieves the "time-averaged hybrid structure" for Average Energy Controllability analysis.
+        Returns:
+        avg_weights: (E_static, ) Mean of dynamic weights on the static skeleton (mean of w_pred)
+        avg_hyper_adj: (N, N) Mean of effective adjacency matrix of hypergraph branches (mean of A_hyper)
+        g: (N, ) Node-level gating value (time-invariant structure preference)
         
-        返回:
-            avg_weights: (E_static, ) 静态骨架上的动态权重平均值 (mean of w_pred)
-            avg_hyper_adj: (N, N)     超图分支的有效邻接矩阵平均值 (mean of A_hyper)
-            g: (N, )                  节点级门控值 (time-invariant structure preference)
-        
-        逻辑:
-        1. 遍历时间步，累积 w_pred。
-        2. 遍历时间步，构建 H_sparse，计算 L_hyper 对应的归一化邻接矩阵 A = Dv^-0.5 H De^-1 H^T Dv^-0.5。
-           虽然 H 是稀疏的，但为了后续谱分解方便，我们在这里累积并返回 dense 格式的 N x N 矩阵。
-           (对于 N <= 5000 的数据集，5000^2 * 4B ≈ 100MB，完全可接受)
-        3. 返回 g。
+        Logic:
+        1. Iterate through the time steps, accumulating w_pred.
+        2. Iterate through the time steps, construct H_sparse, and calculate the normalized adjacency matrix A = Dv^-0.5 H De^-1 H^T Dv^-0.5 corresponding to L_hyper.
+        Although H is sparse, for convenience in subsequent spectral decomposition, we accumulate and return an N x N matrix in dense format here.
+        (For datasets with N <= 5000, 5000^2 * 4B ≈ 100MB is perfectly acceptable)
+        3. Return g.
         """
         T, N, F_in = x_seq.shape
         device = x_seq.device
         static_edge_index = static_edge_index.to(device)
         
-        # 1. 前向传播计算 embeddings (为了得到正确的 g)
-        # 这里必须完整跑一遍 forward 的流程才能拿到正确的 z_graph, z_hyper 从而算出 g
-        # 我们可以复用 forward 代码，或者简化调用。为了稳健，我们手动跑一遍核心逻辑。
+        # 1. Forward propagation computes embeddings (in order to obtain the correct g).
+        # To obtain the correct z_graph and z_hyper, we must run the entire forward process here, and then calculate g.
+        # We can reuse the forward code or simplify the calls. For robustness, we can manually run the core logic once.
         
         x_emb = self.input_proj(x_seq)
         
         graph_feats_list = []
         hyper_feats_list = []
         
-        # 用于累积结构
+        # Used for cumulative structures
         accum_weights = None
         accum_hyper_adj = torch.zeros((N, N), device=device, dtype=torch.float32)
         
@@ -214,7 +213,7 @@ class HyperDriver(nn.Module):
                 accum_weights = torch.zeros_like(w_pred)
             accum_weights += w_pred
             
-            # (为了 g 的计算，需要跑卷积)
+            # (Convolution is required to calculate g)
             h_graph = x_t
             for conv in self.graph_convs:
                 h_graph = conv(h_graph, edge_index=static_edge_index, edge_weight=w_pred)
@@ -222,7 +221,7 @@ class HyperDriver(nn.Module):
             graph_feats_list.append(h_graph)
             
             # --- Hypergraph Branch ---
-            # 我们需要计算有效邻接矩阵 A_hyp = mean_scales( Dv^-0.5 H De^-1 H^T Dv^-0.5 )
+            # We need to calculate the effective adjacency matrix A_hyp = mean_scales( Dv^-0.5 H De^-1 H^T Dv^-0.5 )
             current_step_hyper_adj = torch.zeros((N, N), device=device, dtype=torch.float32)
             
             if len(self.config.num_scales) > 0:
@@ -231,44 +230,41 @@ class HyperDriver(nn.Module):
                     builder = self.hyper_builders[idx]
                     H_sparse = builder(x_t) # [N, N] sparse, indices=[row(node), col(edge)]
                     
-                    # 1. 计算这一尺度的 Hyper Adjacency
-                    # H_sparse 实际上是 Incidence Matrix H (N x E)
-                    # 这里的 builder 实现稍微特殊，它返回的是 N x N 的 sparse tensor 
-                    # 其中 col_idx 实际上代表了 "以该列节点为中心的超边"。
-                    # 所以 H 矩阵的维度是 N x N_hyperedges (这里 N_hyperedges = N)
-                    
-                    # 按照 HGNN 定义: A = H H^T (假设 W_e=I)
-                    # 标准化: D_v^-0.5 H H^T D_v^-0.5 (假设 D_e = k+1 是常数，并在特征中处理了)
-                    # 我们这里显式构建:
-                    
+                    # 1. Calculate Hyper Adjacency at this scale
+                    # H_sparse is actually the Incidence Matrix H (N x E)
+                    # The builder implementation here is slightly special; it returns an N x N sparse tensor
+                    # where col_idx actually represents the "hyperedge centered on the node in that column".
+                    # Therefore, the dimension of the H matrix is ​​N x N_hyperedges (where N_hyperedges = N)
+                    # According to the HGNN definition: A = H H^T (assuming W_e=I)
+                    # Normalization: D_v^-0.5 H H^T D_v^-0.5 (assuming D_e = k+1 is a constant and processed in the features)
+                    # We explicitly construct it here:
                     # H_sparse: [N, N_edges]
-                    # H_dense = H_sparse.to_dense() # 安全起见转 dense，防止 sparse mm 问题
+                    # H_dense = H_sparse.to_dense() # To convert to dense for safety, to prevent sparse mm problems
                     # A_scale = H_dense @ H_dense.t()
-                    
-                    # 优化: 我们可以直接用 sparse mm
-                    # A_scale = torch.sparse.mm(H_sparse, H_sparse.t()) 
-                    # 但 torch.sparse.mm 需要 (Sparse, Dense)。
-                    # 所以 H_dense 是必须的。对于 N=5000，H_dense 只有 25M 个元素，显存占用极小。
+                    # Optimization: We can directly use sparse mm
+                    # A_scale = torch.sparse.mm(H_sparse, H_sparse.t())
+                    # But torch.sparse.mm requires (Sparse, Dense).
+                    # Therefore, H_dense is necessary. For N=5000, H_dense has only 25M elements, resulting in minimal memory usage.
                     
                     H_dense = H_sparse.to_dense() 
                     
-                    # 计算度 D_v (行和)
+                    # Calculate the degree D_v (row sum).
                     Dv = H_dense.sum(dim=1).clamp(min=1e-6)
                     Dv_inv_sqrt = torch.diag(torch.pow(Dv, -0.5))
                     
-                    # 计算度 D_e (列和，即超边大小，通常是 k+1)
+                    # Calculate the degree D_e (column sum, i.e., the size of the hyperedge, usually k+1).
                     De = H_dense.sum(dim=0).clamp(min=1e-6)
                     De_inv = torch.diag(torch.pow(De, -1.0))
                     
                     # A_norm = Dv^-0.5 @ H @ De^-1 @ H^T @ Dv^-0.5
-                    # 这一项就是 Module 3 中 L^(2) 对应的 "Adjacency Part"
+                    # This item corresponds to the "Adjacency Part" of L^(2) in Module 3.
                     term1 = Dv_inv_sqrt @ H_dense # [N, E]
                     term2 = De_inv @ term1.t()    # [E, N]
                     A_scale = term1 @ term2       # [N, N]
                     
                     current_step_hyper_adj += A_scale
                     
-                    # (为了 g 的计算，需要跑卷积)
+                    # (Convolution is required to calculate g)
                     h_hyper_scale = x_t
                     scale_convs = self.hyper_convs_per_scale[idx]
                     for conv in scale_convs:
@@ -276,7 +272,7 @@ class HyperDriver(nn.Module):
                         h_hyper_scale = F.relu(h_hyper_scale)
                     scale_outputs.append(h_hyper_scale)
                 
-                # 平均不同尺度的邻接矩阵
+                # Average adjacency matrix at different scales
                 current_step_hyper_adj /= len(self.config.num_scales)
                 
                 h_hyper_t = torch.stack(scale_outputs, dim=0).mean(dim=0)

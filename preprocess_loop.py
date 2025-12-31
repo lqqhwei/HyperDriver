@@ -9,10 +9,10 @@ from src.data_utils import (
 
 
 def main():
-    # 当前脚本所在目录就是项目根目录 D:/HYPERDRIVER
+    # The current script is located in the project root directory D:/HYPERDRIVER
     root_dir = os.path.dirname(os.path.abspath(__file__))
 
-    # 1. 读取数据集配置 :contentReference[oaicite:13]{index=13}
+    # 1. Read dataset configuration :contentReference[oaicite:13]{index=13}
     conf_path = os.path.join(root_dir, "conf", "datasets.json")
     enabled_datasets = load_datasets_config(conf_path)
 
@@ -23,7 +23,7 @@ def main():
     for name in enabled_datasets:
         print("  -", name)
 
-    # 2. 对每个启用数据集做预处理
+    # 2. Preprocess each enabled dataset
     for name in enabled_datasets:
         print("\n--------------------------------------------")
         print(f"[INFO] Preprocessing dataset: {name}")

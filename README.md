@@ -155,8 +155,7 @@ python main.py
 
 - **Outputs:**
   - Results are saved under `results/<dataset>/full/`,`results/<dataset>/baselines/` (CSV files).
-  - Figures are saved under `figures` / `ablation_battles`,`energy_battles`,`global_summary`,`top_drivers`.
-
+  - Figures are saved under `figures` / `ablation_battles`,`energy_battles`,`global_summary`,`top_drivers`.Each directory under Figure stores three types of files: `CSV`, `PDF`, and `PNG`. PNG contains the resulting image, PDF contains vector graphics, and CSV contains the source data.
 ---
 | Ablation Battle (Yu) Figure | Efficiency Battle (Yu) Figure | Top Drivers (Yu) Figure |
 | :---: | :---: | :---: |
@@ -185,7 +184,7 @@ cd resource/energy_case_study
 python main.py
 ```
 
-- **Output:** generates `resource\energy_case_study\output` \ `energy_results.csv`, `selection_nodes.png`.
+- **Output:** generates `resource\energy_case_study\output` \ `energy_results.csv`, `selection_nodes.csv`, `energy_comparison.png/pdf`.
 ---
 
 | Energy Comparison Case Study Figure |

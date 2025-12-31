@@ -2,25 +2,23 @@
 # -*- coding: utf-8 -*-
 
 """
-根据 SGD 的 phenotype_data.tab 生成必需基因列表，
-并给 Node_Labels.csv 增加以下 5 列：
+Generate a list of essential genes based on the phenotype_data.tab file for SGD,
+and add the following 5 columns to Node_Labels.csv:
+1) SGD: Whether the ORF is in the inviabl* phenotype list for SGD (0/1)
+2) OGEE: Whether it is in the OGEE essential gene list (0/1)
+3) DEG: Whether it is in the DEG essential gene list (0/1)
+4) SOD: The sum of SGD + OGEE + DEG
+5) essential: 1 if SOD >= 1, 0 otherwise
 
-1) SGD  : 该 ORF 是否在 SGD 的 inviabl* 表型列表中 (0/1)
-2) OGEE : 是否在 OGEE 必需基因列表中 (0/1)
-3) DEG  : 是否在 DEG 必需基因列表中 (0/1)
-4) SOD  : SGD + OGEE + DEG 的和
-5) essential : 若 SOD >= 1 则为 1，否则为 0
+Preparation before use:
+- The following files should be in the current directory (or your BASE_DIR):
+phenotype_data.tab
+Node_Labels.csv
+OGEE_essential_orfs.txt
+DEG_essential_orfs.txt
 
-使用前准备：
-- 当前目录（或你设置的 BASE_DIR）里有：
-    phenotype_data.tab
-    Node_Labels.csv
-    OGEE_essential_orfs.txt
-    DEG_essential_orfs.txt
-
-说明：
-- OGEE_essential_orfs.txt / DEG_essential_orfs.txt 格式要求：
-    每行一个 ORF（如 YGR129W），无表头。
+Note:
+- OGEE_essential_orfs.txt / The DEG_essential_orfs.txt file must be formatted as follows: One ORF per line (e.g., YGR129W), with no header.
 """
 
 from pathlib import Path
@@ -28,30 +26,31 @@ import csv
 import pandas as pd
 import shutil
 
-# ---------------- 路径配置（按需修改） ----------------
+# ---------------- Path configuration (modify as needed) ----------------
 BASE_DIR = Path(__file__).resolve().parents[1]
 DATA_DIR = BASE_DIR / "data"
 OUTPUT_DIR = BASE_DIR / "output"
 
-PHENO_PATH        = DATA_DIR / "phenotype_data.tab"          # SGD 下载的原始文件
-NODE_LABELS_PATH  = DATA_DIR / "Node_Labels.csv"             # 你最开始那张表
-OGEE_LIST_PATH    = OUTPUT_DIR / "OGEE_essential_orfs.txt"     # 你已经准备好
-DEG_LIST_PATH     = OUTPUT_DIR / "DEG_essential_orfs.txt"      # 你已经准备好
+PHENO_PATH        = DATA_DIR / "phenotype_data.tab"          # The original file downloaded by SGD
+NODE_LABELS_PATH  = DATA_DIR / "Node_Labels.csv"             # The table you started with
+OGEE_LIST_PATH    = OUTPUT_DIR / "OGEE_essential_orfs.txt"     # You are ready
+DEG_LIST_PATH     = OUTPUT_DIR / "DEG_essential_orfs.txt"      # You are ready
 
-SGD_LIST_PATH     = OUTPUT_DIR / "SGD_essential_orfs.txt"      # 本脚本会自动生成
-OUTPUT_NODE_LABELS = OUTPUT_DIR / "Node_Labels_with_essential.csv"   # 本脚本会自动生成
+SGD_LIST_PATH     = OUTPUT_DIR / "SGD_essential_orfs.txt"      # This script will be generated automatically.
+OUTPUT_NODE_LABELS = OUTPUT_DIR / "Node_Labels_with_essential.csv"   # This script will be generated automatically.
 
 ROOT_DIR = Path(__file__).resolve().parents[3]
 ROOT_DATA = ROOT_DIR / "data"
 
-# ---------------- 工具函数 ----------------
+# ---------------- Utility functions ----------------
 def load_orf_set(txt_path: Path) -> set:
-    """从 txt 文件载入 ORF 集合。
-    要求：每行一个 ORF 名（如 YGR129W），可以有空行，会自动跳过。
-    如果一行有多个字段，只取第一个字段。
+    """
+    Load an ORF collection from a text file.
+    Requirements: One ORF name per line (e.g., YGR129W). Blank lines are allowed and will be automatically skipped.
+    If a line has multiple fields, only the first field will be retrieved.
     """
     if not txt_path.exists():
-        raise FileNotFoundError(f"找不到文件: {txt_path}")
+        raise FileNotFoundError(f"File not found: {txt_path}")
 
     orfs = set()
     with txt_path.open("r", encoding="utf-8") as f:
@@ -63,24 +62,36 @@ def load_orf_set(txt_path: Path) -> set:
             orfs.add(orf)
     return orfs
 
-# ---------------- 第一步：从 phenotype_data.tab 生成 SGD_essential_orfs.txt ----------------
+# ---------------- Step 1: Generate SGD_essential_orfs.txt from phenotype_data.tab ----------------
 def build_sgd_essential_list(pheno_path: Path, out_path: Path) -> None:
     """
-    从 SGD 的 phenotype_data.tab 中筛选出所有 inviabl* 表型的 ORFs，
-    生成一列 ORF 的文本文件 out_path。
+    Filter out all ORFs for the inviabl* phenotype from SGD's phenotype_data.tab.
+    Generate a text file named out_path containing a list of ORFs.
 
-    说明：
-    - 不再使用 pandas.read_csv，而是用 csv.reader 手动解析，
-      因为文件中有些行是 14 列，有些是 15 列或 13 列。
-    - 这里只依赖三列：
+    illustrate:
+    - Instead of using pandas.read_csv, we will manually parse it using csv.reader.
+      Because some rows in the file have 14 columns, while others have 15 or 13 columns.
+    - This only relies on three columns:
         0: ORF
         1: feature_type
-        9: phenotype observable（含 'inviab' 字样）
+        9: phenotype observable (containing the word 'inviab')
+
+    Filter out all ORFs for the `inviabl*` phenotype from the `phenotype_data.tab` file in SGD,
+    and generate a text file named `out_path` containing the ORFs.
+
+    Notes:
+    - Instead of using `pandas.read_csv`, manually parse the data using `csv.reader`,
+
+    because some rows in the file have 14 columns, while others have 15 or 13.
+    - Only three columns are used here:
+        0: ORF
+        1: feature_type
+        9: phenotype observable (containing 'inviab')
     """
     if not pheno_path.exists():
-        raise FileNotFoundError(f"找不到 phenotype_data.tab: {pheno_path}")
+        raise FileNotFoundError(f"phenotype_data.tab not found: {pheno_path}")
 
-    print(f"[INFO] 读取 phenotype 数据: {pheno_path}")
+    print(f"[INFO] Reading phenotype data: {pheno_path}")
 
     essential_orfs = set()
     total_rows = 0
@@ -91,87 +102,87 @@ def build_sgd_essential_list(pheno_path: Path, out_path: Path) -> None:
         for row in reader:
             total_rows += 1
 
-            # 跳过空行或列数太少的奇怪行
+            # Skip blank lines or strange lines with too few columns.
             if not row or len(row) < 10:
                 continue
 
             orf = row[0].strip()
             feature_type = row[1].strip().upper()
-            phenotype = row[9].strip().lower()  # 第 9 列是 phenotype 描述
+            phenotype = row[9].strip().lower()  # Column 9 is the phenotype description.
 
-            # 只要 ORF 类型
+            # As long as ORF type
             if feature_type != "ORF":
                 continue
 
-            # 含 inviabl* 的表型视为必需
+            # Phenotypes containing inviabl are considered necessary.
             if "inviab" in phenotype:
                 essential_orfs.add(orf)
                 used_rows += 1
 
     essential_orfs = sorted(essential_orfs)
-    print(f"[INFO] 总行数: {total_rows}")
-    print(f"[INFO] 符合 inviabl* 记录行数: {used_rows}")
-    print(f"[INFO] 不重复 ORF 数量: {len(essential_orfs)}")
+    print(f"[INFO] Total number of rows: {total_rows}")
+    print(f"[INFO] Number of records matching inviabl*: {used_rows}")
+    print(f"[INFO] Number of unique ORFs: {len(essential_orfs)}")
 
-    # 保存为一列文本，每行一个 ORF
+    # Save as a text column, one ORF per line.
     with out_path.open("w", encoding="utf-8") as f:
         for orf in essential_orfs:
             f.write(f"{orf}\n")
 
-    print(f"[DONE] 已生成 SGD 必需基因列表: {out_path}")
+    print(f"[DONE] A list of genes required for SGD has been generated: {out_path}")
 
-# ---------------- 第二步：给 Node_Labels.csv 增加 SGD/OGEE/DEG/SOD/essential ----------------
+# ---------------- Step 2: Add SGD/OGEE/DEG/SOD/essential to Node_Labels.csv ----------------
 def annotate_node_labels(node_labels_path: Path,
                          sgd_list_path: Path,
                          ogee_list_path: Path,
                          deg_list_path: Path,
                          output_path: Path) -> None:
     """
-    读入 Node_Labels.csv，并基于 3 个列表文件增加 5 列：
+    Read in Node_Labels.csv and add 5 columns based on the 3 list files:
     SGD, OGEE, DEG, SOD, essential
     """
     if not node_labels_path.exists():
-        raise FileNotFoundError(f"找不到 Node_Labels.csv: {node_labels_path}")
+        raise FileNotFoundError(f"Node_Labels.csv not found: {node_labels_path}")
 
-    print(f"[INFO] 读取节点标签表: {node_labels_path}")
+    print(f"[INFO] Read the node label table: {node_labels_path}")
     df = pd.read_csv(node_labels_path)
 
     if "Node" not in df.columns:
-        raise ValueError("Node_Labels.csv 中未找到 'Node' 列，请检查文件格式。")
+        raise ValueError("The 'Node' column was not found in Node_Labels.csv. Please check the file format.")
 
-    print(f"[INFO] 载入 SGD 必需基因列表: {sgd_list_path}")
+    print(f"[INFO] Load the list of genes required for SGD: {sgd_list_path}")
     sgd_set = load_orf_set(sgd_list_path)
 
-    print(f"[INFO] 载入 OGEE 必需基因列表: {ogee_list_path}")
+    print(f"[INFO] Load the list of genes required for OGEE: {ogee_list_path}")
     ogee_set = load_orf_set(ogee_list_path)
 
-    print(f"[INFO] 载入 DEG 必需基因列表: {deg_list_path}")
+    print(f"[INFO] Load the list of genes required for DEG: {deg_list_path}")
     deg_set = load_orf_set(deg_list_path)
 
-    # 逐列标记
+    # Column-by-column marking
     nodes = df["Node"].astype(str)
 
     df["SGD"]  = nodes.isin(sgd_set).astype(int)
     df["OGEE"] = nodes.isin(ogee_set).astype(int)
     df["DEG"]  = nodes.isin(deg_set).astype(int)
 
-    # 计算 SOD 和 essential
+    # Calculate SOD and essential
     df["SOD"] = df[["SGD", "OGEE", "DEG"]].sum(axis=1)
     df["essential"] = (df["SOD"] >= 1).astype(int)
 
-    print(f"[INFO] 新增列完成，开始保存到: {output_path}")
+    print(f"[INFO] Adding a new column, starting to save to: {output_path}")
     df.to_csv(output_path, index=False, encoding="utf-8-sig")
-    print("[DONE] Node_Labels_with_essential.csv 已生成。")
+    print("[DONE] The Node_Labels_with_essential.csv file has been generated.")
 
 # ---------------- main ----------------
 def main():
-    # 1) 先从 phenotype_data.tab 生成 SGD_essential_orfs.txt
+    # 1) First, generate SGD_essential_orfs.txt from phenotype_data.tab.
     if not SGD_LIST_PATH.exists():
         build_sgd_essential_list(PHENO_PATH, SGD_LIST_PATH)
     else:
-        print(f"[INFO] 已存在 SGD 列表文件: {SGD_LIST_PATH}，跳过生成步骤。")
+        print(f"[INFO] An SGD list file already exists: {SGD_LIST_PATH}, skip the generation step.")
 
-    # 2) 基于 SGD/OGEE/DEG 列表给 Node_Labels.csv 加列
+    # 2) Add columns to Node_Labels.csv based on the SGD/OGEE/DEG list.
     annotate_node_labels(
         NODE_LABELS_PATH,
         SGD_LIST_PATH,
@@ -180,7 +191,7 @@ def main():
         OUTPUT_NODE_LABELS,
     )
 
-    # 3) 把Node_Labels_with_essential.csv复制到根目录下的data下，以备后面的程序使用
+    # 3) Copy Node_Labels_with_essential.csv to the data folder in the root directory for later use in the program.
     shutil.copy(OUTPUT_NODE_LABELS, ROOT_DATA)
 
 if __name__ == "__main__":
