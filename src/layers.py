@@ -1,6 +1,6 @@
 # src/layers.py
 """
-Base layer module (V4.2 Memory Optimized - Sparse Implementation)
+Base layer module
 Solving OOM problems on large datasets such as Babu/Gavin
 """
 

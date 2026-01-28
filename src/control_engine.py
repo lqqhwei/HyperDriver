@@ -1,6 +1,6 @@
 # src/control_engine.py
 """
-Control Engine: Global Greedy Strategy (V17.0 - Optimized).
+Control Engine: Global Greedy Strategy.
 Refactored for 12 datasets. N=100~5000.
 The Driver Score (Ki) is now strictly the Marginal Energy Reduction (Delta E) 
 derived from a full-scan Global Greedy search.

@@ -1,7 +1,6 @@
 # eval_driver.py
 """
 Step 4: HyperDriver Comprehensive Evaluation (Adaptive K-Means Version)
-Version: V27 + Adaptive K-Means Clustering Truncation
 Features:
 1. Integration with Global Greedy Engine.
 2. [FINAL ADAPTIVE SOLUTION] Key Driver Identification:

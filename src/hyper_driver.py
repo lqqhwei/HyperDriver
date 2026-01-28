@@ -20,7 +20,7 @@ from .layers import (
 @dataclass
 class HyperDriverConfig:
     """
-    HyperDriver Model Configuration (V4.2 Optimized: Sparse + Residual)
+    HyperDriver Model Configuration
     """
     in_feats: int                  
     hidden_dim: int = 64           
@@ -36,7 +36,7 @@ class HyperDriverConfig:
 
 class HyperDriver(nn.Module):
     """
-    HyperDriver V4.2 Main model
+    HyperDriver Main model
     """
 
     def __init__(self, config: HyperDriverConfig):

@@ -157,7 +157,7 @@ def main():
         print("[ERROR] No data loaded. Check paths and enabled datasets.")
         return
 
-    # 3. Apply  Logic
+    # 3. Apply Logic
     best_df = select_representatives_topsis(giant_df)
     
     # 4. Final Clean Output
