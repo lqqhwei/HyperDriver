@@ -1,13 +1,14 @@
+# resource/energy_case_study/src/methods.py
 import random
 import numpy as np
-import networkx as nx
+import scipy.linalg as la
 
 class DriverSelector:
     def __init__(self, G_sub, A_sub, node_list):
         """
-        G_sub: NetworkX subgraph objects
+        G_sub: NetworkX subgraph object
         A_sub: Subgraph adjacency matrix (NumPy array)
-        node_list: List of node names (corresponding to the A_sub index)
+        node_list: List of node names (corresponding to A_sub indices)
         """
         self.G = G_sub
         self.A = A_sub
@@ -15,106 +16,71 @@ class DriverSelector:
         self.num_nodes = len(node_list)
 
     def select_random(self, k, seed=42):
-        """
-        [Benchmark 1] Randomly select K nodes
-        """
+        """[Benchmark 1] Random Selection"""
         random.seed(seed)
         indices = list(range(self.num_nodes))
         selected_indices = random.sample(indices, k)
         return selected_indices, [self.nodes[i] for i in selected_indices]
 
     def select_degree(self, k):
-        """
-        [Benchmark 2] Select K nodes based on degree centrality (Hubs)
-        """
-        # Calculate the degree (using NetworkX or directly sum(A)).
+        """[Benchmark 2] Degree Centrality (Hubs)"""
         degrees = np.sum(self.A, axis=1)
-        
-        # Retrieve index sorting (from largest to smallest)
-        # argsort sorts by default from smallest to largest, so inverting or slicing [::-1] is an option.
+        # Sort desc
         sorted_indices = np.argsort(degrees)[::-1]
-        
         selected_indices = sorted_indices[:k]
         return selected_indices, [self.nodes[i] for i in selected_indices]
 
-    def select_hyperdriver_proxy(self, k):
+    def select_hyperdriver(self, k):
         """
-        [HyperDriver Logic] Selection based on spectral energy proxy
-        
-        Thesis basis: 
-        1. Energy Proxy E ~ 1 / lambda_max (Section 2.4.2) [cite: 91]
-        2. Driver rating K_i ~ Delta E_i (Section 2.4.3) [cite: 100]
-        
-        logic:
-        We need to find those nodes that, if removed, would cause the network energy E to deteriorate the most.
-        This means that these nodes are the key anchors for maintaining the current "low-energy controllable state" of the network.
-        Therefore, controlling them (Input) is the most effective approach.
+        [Proposed Method] HyperDriver Global Greedy (V17 Logic)
+        Iteratively selects nodes that minimize the Control Energy (Tr(W_c^-1)).
+        Strictly aligned with control_engine.py V17.
         """
-        print("Calculating Spectral Energy Proxy scores...")
-        
-        # 1. Calculate the original Laplacian matrix and its largest eigenvalue.
+        # 1. Construct System Matrix (Laplacian Dynamics)
         # L = D - A
-        D = np.diag(np.sum(self.A, axis=1))
-        L_base = D - self.A
+        degrees = np.sum(self.A, axis=1)
+        L = np.diag(degrees) - self.A
         
-        # Calculate the original spectral radius (Largest Eigenvalue of Laplacian)
-        # Note: For an undirected graph L, which is positive semi-definite, all eigenvalues ​​are real numbers >= 0.
-        try:
-            # Using eigvalsh to compute eigenvalues ​​of symmetric matrices is faster and more stable.
-            evals_base = np.linalg.eigvalsh(L_base)
-            lambda_max_base = np.max(evals_base)
-        except np.linalg.LinAlgError:
-            lambda_max_base = 0.0
+        # 2. Spectral Decomposition
+        # We use a small epsilon for stability, similar to control_engine.py
+        epsilon = 1e-9
+        L_sys = L + epsilon * np.eye(self.num_nodes)
+        
+        # Eigen-decomposition
+        eigvals, eigvecs = la.eigh(L_sys)
+        
+        # Filter small eigenvalues to avoid numerical instability
+        valid_mask = eigvals > 1e-9
+        lambdas = eigvals[valid_mask]
+        V_sq = np.square(eigvecs[:, valid_mask])
+        
+        # 3. Global Greedy Iteration
+        # Objective: Minimize Energy = Sum( 1 / (Sum(v_i^2) + epsilon) ) * weighting
+        # V17 Formula: Energy ~ Sum( 2*lambda / (Current_Proj + Candidate_Proj) )
+        
+        two_lambdas = 2.0 * lambdas
+        current_proj = np.zeros(len(lambdas))
+        remaining_indices = list(range(self.num_nodes))
+        selected_indices = []
 
-        scores = []
-        
-        # 2. Iterate through each node and calculate the energy change "after the perturbation".
-        for i in range(self.num_nodes):
-            # Simulate removing node i:
-            # Delete the i-th row and i-th column from the matrix.
-            # In fact, we construct an (N-1)x(N-1) matrix
-            A_prime = np.delete(np.delete(self.A, i, axis=0), i, axis=1)
-            D_prime_vals = np.sum(A_prime, axis=1)
-            L_prime = np.diag(D_prime_vals) - A_prime
+        for _ in range(k):
+            # Calculate energy for all remaining candidates
+            # Shape: [Num_Remaining]
+            # We want to find the node that results in the MINIMUM total energy
+            candidate_proj = V_sq[remaining_indices] # [M, Num_Eig]
             
-            try:
-                evals_prime = np.linalg.eigvalsh(L_prime)
-                lambda_max_prime = np.max(evals_prime)
-            except:
-                lambda_max_prime = 0.0
+            # Broadcast addition: (1, Num_Eig) + (M, Num_Eig)
+            total_proj = current_proj + candidate_proj + 1e-12
             
-            # Calculate the score:
-            # Based on the paper, we focus on Delta E.
-            # E_base ~ 1/lambda_max_base
-            # E_prime ~ 1/lambda_max_prime
-            # If a node is important, removing it will make the system "more difficult to control" (Structure degrades), 
-            # This typically manifests as a decrease in lambda_max (Connectivity/Stiffness drops).
-            # This causes E_prime (1/small) to become very large.
-            # Score = E_prime - E_base
+            # Energy = Sum( 2*lambda / Projection )
+            energies = np.sum(two_lambdas / total_proj, axis=1)
             
-            epsilon = 1e-9
-            energy_base = 1.0 / (lambda_max_base + epsilon)
-            energy_prime = 1.0 / (lambda_max_prime + epsilon)
+            # Greedy Choice: Argmin Energy
+            best_local_idx = np.argmin(energies)
+            best_global_idx = remaining_indices.pop(best_local_idx)
             
-            delta_E = energy_prime - energy_base
-            scores.append((i, delta_E))
+            # Update state
+            selected_indices.append(best_global_idx)
+            current_proj += V_sq[best_global_idx]
             
-        # 3. Sort by selecting the node with the largest Delta E (i.e., the node with the highest removal cost).
-        scores.sort(key=lambda x: x[1], reverse=True)
-        
-        selected_indices = [idx for idx, score in scores[:k]]
         return selected_indices, [self.nodes[i] for i in selected_indices]
-
-# Test code
-if __name__ == "__main__":
-    # Simple Mock Data Test
-    G_mock = nx.erdos_renyi_graph(20, 0.3, seed=42)
-    A_mock = nx.to_numpy_array(G_mock)
-    nodes_mock = [str(i) for i in range(20)]
-    
-    selector = DriverSelector(G_mock, A_mock, nodes_mock)
-    
-    k = 3
-    print("Random:", selector.select_random(k)[0])
-    print("Degree:", selector.select_degree(k)[0])
-    print("HyperDriver:", selector.select_hyperdriver_proxy(k)[0])
