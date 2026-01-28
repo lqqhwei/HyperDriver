@@ -102,7 +102,6 @@ python main.py
 ```
 
 - **Output:** generates `resource\energy_case_study\output`.
----
 
 ### Step 3: Driving Patterns and Biological Mechanisms(Case Study)
 - **Script location:** `resource/driver_case_study/main.py`
@@ -123,8 +122,6 @@ The dynamic yeast DPPIN datasets used in this project are obtained from the orig
 - **Description:** 12 dynamic yeast networks integrating static PPI edges with time-course gene expression.
 - **Format:** Raw files (e.g., `Static_PPIN.txt`, `Dynamic_PPIN.txt`, `Node_Features.txt`) are organized under `data/<DatasetName>/`.
 
-
-## Reference (DPPIN)
 If you use the DPPIN datasets, please cite the original paper:
 
 ```bibtex
