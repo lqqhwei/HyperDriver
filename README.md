@@ -26,7 +26,7 @@ HyperDriver/                      # Thesis Reproduction Project Root Directory
 ├── results/                      # All dataset CSV result files generated after the main script is executed
 ├── checkpoints/                  # Stores trained model weights and configurations for full model evaluation
 ├── processed/                    # Holds cleaned, unified, and index-mapped protein datasets for training
-├── resource/                     # Case Directory
+├── casestudies/                     # Case Directory
 │   ├── driver_case_study/        # Functional subgraphs and physical verification
 │       ├── output/               # Results output directory
 │       └── src/                  # Case source code directory
@@ -93,26 +93,26 @@ python main.py
   - Figures are saved under `figures` / `ablation_battles`,`energy_battles`,`global_summary`,`top_drivers`.
 
 ### Step 2: Functional Subgraphs and Physical Verification(Case Study)
-- **Script location:** `resource/energy_case_study/main.py`
+- **Script location:** `casestudies/energy_case_study/main.py`
 - **Command:**
 
 ```bash
-# cd resource/energy_case_study
+# cd casestudies/energy_case_study
 python main.py
 ```
 
-- **Output:** generates `resource\energy_case_study\output`.
+- **Output:** generates `casestudies\energy_case_study\output`.
 
 ### Step 3: Driving Patterns and Biological Mechanisms(Case Study)
-- **Script location:** `resource/driver_case_study/main.py`
+- **Script location:** `casestudies/driver_case_study/main.py`
 - **Command:**
 
 ```bash
-# cd resource/driver_case_study
+# cd casestudies/driver_case_study
 python main.py
 ```
 
-- **Output:** generates `resource\driver_case_study\output`.
+- **Output:** generates `casestudies\driver_case_study\output`.
 
 
 ## Datasets
