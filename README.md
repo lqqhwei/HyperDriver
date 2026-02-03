@@ -146,7 +146,7 @@ We thank the authors of DPPIN for making the datasets publicly available.
 If you find this code useful, please cite our paper:
 
 ```bibtex
-@article{HyperDriver2025,
+@article{HyperDriver2026,
   title   = {Key Driver Protein Identification Based on Spectral Energy Proxy and Multi-scale Spatio-temporal Hypergraph},
   author  = {Qiangqiang Li},
   note    = {Manuscript submitted, under review},
