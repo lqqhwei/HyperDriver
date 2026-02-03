@@ -1,4 +1,4 @@
 Dataset,Case,Protein,Driver_Score,Degree_Score
-Uetz,Peripheral_Hub,YMR061W,0.999999999936612,1.0
-Gavin,High_Efficiency_Hub,YDL051W,0.873013602551615,176.0
-Breitkreutz,Low_Efficiency_Hub,YBR200W,0.0,41.0
+Uetz,Edge_Driver,YMR061W,0.999999999936612,1.0
+Gavin,Efficient_Hub,YDL051W,0.873013602551615,176.0
+Breitkreutz,Inefficient_Hub,YBR200W,0.0,41.0

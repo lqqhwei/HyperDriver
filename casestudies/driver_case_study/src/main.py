@@ -17,9 +17,9 @@ from pathlib import Path
 #   * Essential column is REMOVED to focus purely on network physics.
 #
 # Ideal Points:
-#   1. Peripheral_Hub:    (Score=1.0, Normalized_Degree=0.0)
-#   2. High_Efficiency_Hub:      (Score=1.0, Normalized_Degree=1.0)
-#   3. Low_Efficiency_Hub:  (Score=0.0, Normalized_Degree=1.0)
+#   1. Edge_Driver:    (Score=1.0, Normalized_Degree=0.0)
+#   2. Efficient_Hub:      (Score=1.0, Normalized_Degree=1.0)
+#   3. Inefficient_Hub:  (Score=0.0, Normalized_Degree=1.0)
 # =============================================================================
 
 def load_datasets_config(conf_path: str) -> List[str]:
@@ -91,10 +91,10 @@ def select_representatives_topsis(df: pd.DataFrame) -> pd.DataFrame:
     # Driver_Score is assumed to be already [0, 1]
     
     # ---------------------------------------------------------
-    # Case 1: Peripheral_Hub
+    # Case 1: Edge_Driver
     # Target: Score=1.0 (Max Control), Degree=0.0 (Min Topology)
     # ---------------------------------------------------------
-    print("Calculating Case 1 (Peripheral_Hub)...")
+    print("Calculating Case 1 (Edge_Driver)...")
     
     # Euclidean Distance formula
     df["Dist_C1"] = np.sqrt( (df["Driver_Score"] - 1.0)**2 + (df["Norm_Degree"] - 0.0)**2 )
@@ -104,11 +104,11 @@ def select_representatives_topsis(df: pd.DataFrame) -> pd.DataFrame:
     c1_best = df.sort_values(by=["Dist_C1", "Protein"], ascending=[True, True]).iloc[0]
     
     c1_entry = c1_best.copy()
-    c1_entry["Case"] = "Peripheral_Hub"
+    c1_entry["Case"] = "Edge_Driver"
     results.append(c1_entry)
 
     # ---------------------------------------------------------
-    # Case 2: High_Efficiency_Hub
+    # Case 2: Efficient_Hub
     # Target: Score=1.0 (Max Control), Degree=1.0 (Max Topology)
     # ---------------------------------------------------------
     print("Calculating Case 2 (True Leader)...")
@@ -118,21 +118,21 @@ def select_representatives_topsis(df: pd.DataFrame) -> pd.DataFrame:
     c2_best = df.sort_values(by=["Dist_C2", "Protein"], ascending=[True, True]).iloc[0]
     
     c2_entry = c2_best.copy()
-    c2_entry["Case"] = "High_Efficiency_Hub"
+    c2_entry["Case"] = "Efficient_Hub"
     results.append(c2_entry)
 
     # ---------------------------------------------------------
-    # Case 3: Low_Efficiency_Hub
+    # Case 3: Inefficient_Hub
     # Target: Score=0.0 (Min Control), Degree=1.0 (Max Topology)
     # ---------------------------------------------------------
-    print("Calculating Case 3 (Low_Efficiency_Hub)...")
+    print("Calculating Case 3 (Inefficient_Hub)...")
     
     df["Dist_C3"] = np.sqrt( (df["Driver_Score"] - 0.0)**2 + (df["Norm_Degree"] - 1.0)**2 )
     
     c3_best = df.sort_values(by=["Dist_C3", "Protein"], ascending=[True, True]).iloc[0]
     
     c3_entry = c3_best.copy()
-    c3_entry["Case"] = "Low_Efficiency_Hub"
+    c3_entry["Case"] = "Inefficient_Hub"
     results.append(c3_entry)
 
     return pd.DataFrame(results)
@@ -165,8 +165,8 @@ def main():
     best_df = best_df[cols_order]
 
     # 5. Save
-    os.makedirs(os.path.join(root_dir, "resource/driver_case_study/output"), exist_ok=True)
-    out_path = os.path.join(root_dir, "resource/driver_case_study/output", "driver_results.csv")
+    os.makedirs(os.path.join(root_dir, "casestudies/driver_case_study/output"), exist_ok=True)
+    out_path = os.path.join(root_dir, "casestudies/driver_case_study/output", "driver_results.csv")
     best_df.to_csv(out_path, index=False)
 
     print("\n========== FINAL RESULTS (Clean TOPSIS) ==========")

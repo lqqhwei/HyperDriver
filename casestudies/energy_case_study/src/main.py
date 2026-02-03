@@ -1,4 +1,4 @@
-# resource/energy_case_study/src/main.py
+# casestudies/energy_case_study/src/main.py
 import os
 import numpy as np
 import matplotlib.pyplot as plt
@@ -13,8 +13,8 @@ from methods import DriverSelector
 from control_energy import ControlEnergyCalculator
 
 # Configuration (Aligning with your structure)
-ROOT = Path(__file__).resolve().parents[3] # Assuming d:/HD/resource/energy_case_study/src/main.py
-OUTPUT_DIR = ROOT / "resource/energy_case_study/output"
+ROOT = Path(__file__).resolve().parents[3] # Assuming d:/HD/casestudies/energy_case_study/src/main.py
+OUTPUT_DIR = ROOT / "casestudies/energy_case_study/output"
 STATIC_DIR = ROOT / "data/Yu"
 # [Deleted] LABEL_DIR is no longer needed
 
