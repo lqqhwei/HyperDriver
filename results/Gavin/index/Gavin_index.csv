@@ -1,0 +1,2 @@
+Dataset,Total_Nodes_N,Identified_Drivers_K,Identification_Rate(%),HD_Log10_Energy(LCE),DC_Log10_Energy_Base,Energy_Reduction_Magnitude(MER),"Edge_Driver_Specificity(EDS,%)",Topo_Concentration_Ratio(TCR),Mean_Marginal_Gain(MEG)
+Gavin,2541,457,17.99%,4.1875,4.423,0.24,72.87%,0.94,0.6204
