@@ -12,13 +12,13 @@ def load_datasets_config(conf_path: str) -> List[str]:
     return [item["name"] for item in cfg.get("datasets", []) if item.get("enabled", False)]
 
 def get_interpolated_log_energy(battle_df: pd.DataFrame, strategy: str, target_frac: float) -> float:
-    """平滑线性插值，计算当前稀疏度下的近似物理能量"""
+    #Smooth linear interpolation to calculate approximate physical energy at the current sparsity.
     sub = battle_df[battle_df["strategy"] == strategy].sort_values("selected_frac")
     if sub.empty: return np.nan
     fracs = sub["selected_frac"].values
     energies = sub["energy"].values
     log_energies = np.log10(energies + 1e-9)
-    # 若超出范围，取最边缘值
+    # If the value is outside the range, take the edge value.
     if target_frac > fracs.max(): return float(log_energies[-1])
     if target_frac < fracs.min(): return float(log_energies[0])
     return float(np.interp(target_frac, fracs, log_energies))
@@ -30,7 +30,7 @@ def main():
 
     for ds in datasets:
         res_dir = os.path.join(root_dir, "results", ds)
-        # 读取你目前硬盘里已有的、完全没被动过的数据
+        # Read data that is currently on your hard drive and has not been touched.
         try:
             nodes_df = pd.read_csv(os.path.join(res_dir, "full", "node_scores.csv"))
             keys_df = pd.read_csv(os.path.join(res_dir, "keys", "key_driver_nodes.csv"))
@@ -47,12 +47,12 @@ def main():
         driver_scores = merged["driver_score_x"].values if "driver_score_x" in merged.columns else merged["driver_score"].values
         global_avg_degree = nodes_df["score_S"].mean()
 
-        # 计算特异性与边际效能
+        # Computational specificity and marginal utility
         eds_pct = (np.sum(driver_degrees <= global_avg_degree) / K) * 100
         tcr_ratio = np.mean(driver_degrees) / global_avg_degree if global_avg_degree > 0 else 0
         mean_meg = np.mean(driver_scores)
 
-        # 插值估算能量 (微小误差，完全可接受)
+        # Energy is estimated via interpolation (minor errors, perfectly acceptable).
         hd_log_energy = get_interpolated_log_energy(battle_df, "HyperDriver", sparsity_frac)
         dc_log_energy = get_interpolated_log_energy(battle_df, "DC", sparsity_frac)
         mer_score = dc_log_energy - hd_log_energy
@@ -71,17 +71,17 @@ def main():
         }
         all_metrics.append(metrics_dict)
         
-        # 存单文件
+        # deposit slip documents
         idx_dir = os.path.join(res_dir, "index")
         os.makedirs(idx_dir, exist_ok=True)
         pd.DataFrame([metrics_dict]).to_csv(os.path.join(idx_dir, f"{ds}_index.csv"), index=False)
 
-    # 存总表
+    # Summary Table
     if all_metrics:
         metrics_dir = os.path.join(root_dir, "metrics")
         os.makedirs(metrics_dir, exist_ok=True)
         pd.DataFrame(all_metrics).to_csv(os.path.join(metrics_dir, "index_summary.csv"), index=False)
-        print("✅ 0风险提取完成！请去 metrics/index_summary.csv 查看你的终极汇总表。")
+        print("✅ Zero-risk extraction complete! Please go to metrics/index_summary.csv to view your final summary table.")
 
 if __name__ == "__main__":
     main()

@@ -50,7 +50,7 @@ def load_baseline_scores(root_dir: str, dataset_name: str, N: int) -> Dict[str, 
             except: pass
     return loaded
 
-# [NEW] Helper: 1D K-Means Clustering (k=2)
+# Helper: 1D K-Means Clustering (k=2)
 def find_kmeans_threshold(scores: np.ndarray) -> float:
     """
     Splits scores into High/Low clusters using iterative K-Means.
@@ -87,8 +87,7 @@ def find_kmeans_threshold(scores: np.ndarray) -> float:
     threshold = (c1 + c2) / 2.0
     return threshold
 
-# [NEW] Function: Adaptive K-Means Identification
-# [Modified in eval_driver.py]
+# Function: Adaptive K-Means Identification
 def identify_key_drivers_kmeans(nodes_df: pd.DataFrame) -> pd.DataFrame:
     """
     Identifies key drivers using K-Means Clustering with a Sparsity Guardrail.

@@ -33,9 +33,7 @@ class SubgraphSelector:
         return self._extract_subgraph_from_nodes(best_hub_region)
 
     def _find_best_community(self):
-        """
-        Using a greedy modularity maximization algorithm to find communities
-        """
+        # Using a greedy modularity maximization algorithm to find communities
         try:
             # Finding a community (this is a list of node sets)
             communities = list(greedy_modularity_communities(self.G))
@@ -67,9 +65,7 @@ class SubgraphSelector:
             return None
 
     def _grow_from_hub(self):
-        """
-        Start using BFS from the node with the highest degree and continue until the maximum size is reached.
-        """
+        # Start using BFS from the node with the highest degree and continue until the maximum size is reached.
         # Find the node with the largest degree
         degree_dict = dict(self.G.degree())
         sorted_nodes = sorted(degree_dict.items(), key=lambda item: item[1], reverse=True)
@@ -95,9 +91,7 @@ class SubgraphSelector:
         return list(selected_nodes)
 
     def _extract_subgraph_from_nodes(self, nodes):
-        """
-        Extract subgraph objects, adjacency matrix, and mapping from the node list.
-        """
+        #Extract subgraph objects, adjacency matrix, and mapping from the node list.
         subgraph = self.G.subgraph(nodes).copy()
         
         # Reorder nodes to ensure matrix index alignment
