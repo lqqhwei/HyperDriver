@@ -1,5 +1,5 @@
 # Key Driver Protein Identification Based on Spectral Energy Proxy and Multi-scale Spatio-temporal Hypergraph
-[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.18102406.svg)](https://doi.org/10.5281/zenodo.18102406)
+[![DOI](https://zenodo.org/badge/DOI/10.5281/zenodo.19156500.svg)](https://doi.org/10.5281/zenodo.19156500)
 [![License](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![Python](https://img.shields.io/badge/Python-3.12%2B-blue.svg)](https://www.python.org/)
 [![PyTorch](https://img.shields.io/badge/PyTorch-2.5%2B-orange.svg)](https://pytorch.org/)
